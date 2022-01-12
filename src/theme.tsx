@@ -1,8 +1,6 @@
 import { extendTheme } from '@chakra-ui/react';
 import { createBreakpoints } from '@chakra-ui/theme-tools';
 
-const fonts = { body: 'Futura', mono: `'PT Mono', monospace` };
-
 const breakpoints = createBreakpoints({
   sm: '40em',
   md: '52em',
@@ -11,10 +9,24 @@ const breakpoints = createBreakpoints({
 });
 
 const theme = extendTheme({
+  styles: {
+    global: {
+      '.chakra-form-control': {
+        '.chakra-form__error-message': {
+          fontWeight: 'semibold'
+        }
+      },
+      '.chakra-stack': {
+        h2: {
+          fontFamily: 'PT Serif Caption'
+        }
+      }
+    }
+  },
   colors: {
     black: '#16161D'
   },
-  fonts,
+  fonts: { body: 'Palatino', mono: `'PT Mono', monospace` },
   breakpoints,
   icons: {
     logo: {

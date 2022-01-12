@@ -1,8 +1,9 @@
 import React from 'react';
+import NextLink from 'next/link';
 import { Form, Formik, FormikState } from 'formik';
-import { Button } from '@chakra-ui/react';
-import Wrapper from '../components/wrapper';
-import InputField from '../components/inputField';
+import { Button, Flex, Link } from '@chakra-ui/react';
+import Wrapper from '../components/Wrapper';
+import InputField from '../components/InputField';
 import { useLoginMutation } from '../generated/graphql';
 import { toErrorMap } from '../utils/toErrorMap';
 import { useRouter } from 'next/router';
@@ -10,39 +11,53 @@ import { withUrqlClient } from 'next-urql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 
 interface FormValues {
-  username: string;
+  usernameOrEmail: string;
   password: string;
 }
 
 const Login = () => {
-  const route = useRouter();
+  const {
+    push,
+    query: { next }
+  } = useRouter();
   const [, login] = useLoginMutation();
 
   return (
     <Wrapper variant="small">
       <Formik
-        initialValues={{ username: '', password: '' }}
+        initialValues={{ usernameOrEmail: '', password: '' }}
         onSubmit={async (values, { setErrors }) => {
-          const { data } = await login({ input: values });
+          const { data } = await login(values);
           if (data?.login.errors) {
             setErrors(toErrorMap(data.login.errors));
           } else if (data?.login.user) {
-            await route.push('/');
+            await push(next ? (next as string) : '/');
           }
         }}
       >
         {({ isSubmitting }: FormikState<FormValues>) => (
           <Form>
-            <InputField name="username" placeholder="username" label="Username" />
-            <InputField
-              name="password"
-              placeholder="password"
-              label="Password"
-              type="password"
-            />
-            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
-              Login
-            </Button>
+            <Flex flexDir="column">
+              <InputField
+                name="usernameOrEmail"
+                placeholder="username or email"
+                label="Username or Email"
+              />
+              <InputField
+                name="password"
+                placeholder="password"
+                label="Password"
+                type="password"
+              />
+              <NextLink href="/forgot-password">
+                <Link mt={4} color="teal">
+                  Forgot the password? Click here
+                </Link>
+              </NextLink>
+              <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
+                Login
+              </Button>
+            </Flex>
           </Form>
         )}
       </Formik>

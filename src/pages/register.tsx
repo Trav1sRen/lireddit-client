@@ -1,8 +1,8 @@
 import React from 'react';
 import { Form, Formik, FormikState } from 'formik';
 import { Button } from '@chakra-ui/react';
-import Wrapper from '../components/wrapper';
-import InputField from '../components/inputField';
+import Wrapper from '../components/Wrapper';
+import InputField from '../components/InputField';
 import { useRegisterMutation } from '../generated/graphql';
 import { toErrorMap } from '../utils/toErrorMap';
 import { useRouter } from 'next/router';
@@ -11,6 +11,7 @@ import { createUrqlClient } from '../utils/createUrqlClient';
 
 interface FormValues {
   username: string;
+  email: string;
   password: string;
 }
 
@@ -21,9 +22,9 @@ const Register = () => {
   return (
     <Wrapper variant="small">
       <Formik
-        initialValues={{ username: '', password: '' }}
+        initialValues={{ username: '', email: '', password: '' }}
         onSubmit={async (values, { setErrors }) => {
-          const { data } = await register(values);
+          const { data } = await register({ input: values });
           if (data?.register.errors) {
             setErrors(toErrorMap(data.register.errors));
           } else if (data?.register.user) {
@@ -34,6 +35,7 @@ const Register = () => {
         {({ isSubmitting }: FormikState<FormValues>) => (
           <Form>
             <InputField name="username" placeholder="username" label="Username" />
+            <InputField name="email" placeholder="email" label="Email" />
             <InputField
               name="password"
               placeholder="password"
