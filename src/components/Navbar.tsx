@@ -33,9 +33,14 @@ const Navbar = () => {
     );
   } else {
     navbarContent = (
-      <Flex align="baseline">
+      <Flex align="baseline" fontFamily="Futura">
         <Box mr={2}>{data.loginState.username}</Box>
-        <Button variant="link" onClick={() => logout()} isLoading={fetchingLogout}>
+        <Button
+          variant="link"
+          colorScheme="blue"
+          onClick={() => logout()}
+          isLoading={fetchingLogout}
+        >
           Logout
         </Button>
       </Flex>

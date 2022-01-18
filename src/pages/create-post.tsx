@@ -34,7 +34,13 @@ const createPost = () => {
           <Form>
             <Flex flexDir="column">
               <InputField name="title" placeholder="title" label="Title" />
-              <InputField name="text" placeholder="text..." label="Body" textarea />
+              <InputField
+                name="text"
+                placeholder="text..."
+                label="Body"
+                textarea
+                height={250}
+              />
               <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
                 Create the post
               </Button>

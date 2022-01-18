@@ -26,7 +26,7 @@ const theme = extendTheme({
   colors: {
     black: '#16161D'
   },
-  fonts: { body: 'Palatino', mono: `'PT Mono', monospace` },
+  fonts: { heading: 'Papyrus', body: 'Palatino', mono: `'PT Mono', monospace` },
   breakpoints,
   icons: {
     logo: {

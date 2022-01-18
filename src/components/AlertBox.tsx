@@ -13,7 +13,7 @@ interface AlertBoxPropType {
   type: AlertStatus;
   title: ReactElement | string;
   desc: ReactElement | string;
-  closeBinding: MouseEventHandler<HTMLButtonElement>;
+  closeBinding?: MouseEventHandler<HTMLButtonElement>;
 }
 
 const AlertBox = ({ type, title, desc, closeBinding }: AlertBoxPropType) => {
@@ -24,7 +24,9 @@ const AlertBox = ({ type, title, desc, closeBinding }: AlertBoxPropType) => {
         <AlertTitle>{title}</AlertTitle>
         <AlertDescription fontSize="sm">{desc}</AlertDescription>
       </Flex>
-      <CloseButton onClick={closeBinding} position="absolute" right="8px" top="8px" />
+      {closeBinding && (
+        <CloseButton onClick={closeBinding} position="absolute" right="8px" top="8px" />
+      )}
     </Alert>
   );
 };

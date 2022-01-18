@@ -4,14 +4,15 @@ import {
   Post,
   PostsDocument,
   PostsQuery,
-  PostsQueryVariables,
-  usePostsQuery
+  PostsQueryVariables
 } from '../generated/graphql';
 import Layout from '../components/Layout';
 import NextLink from 'next/link';
-import { Box, Button, Divider, Heading, Stack, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { Box, Button, Divider, Flex, Heading, Link, Stack, Text } from '@chakra-ui/react';
+import { useState } from 'react';
 import { useClient } from 'urql';
+import AlertBox from '../components/AlertBox';
+import useAsyncEffect from '../utils/useAsyncEffect';
 
 const Index = () => {
   const [cursor, setCursor] = useState('');
@@ -21,36 +22,46 @@ const Index = () => {
   const [fetchingMore, setFetchingMore] = useState(false);
   const [loadAll, setLoadAll] = useState(false);
 
-  const [{ data }] = usePostsQuery({ variables: { limit: 10 } }); // fetching would be always 'false' as page is using SSR
   const { query } = useClient();
+
+  const getCursor = (posts: Post[]) => posts.slice(-1)[0].createdAt;
+
+  const setStateWithPosts = (posts: Post[]) => {
+    const { length } = posts;
+
+    if (length < 10) {
+      setLoadAll(true);
+    } else {
+      setCursor(getCursor(posts as Post[]));
+    }
+
+    length && setPosts(prevPosts => [...prevPosts, ...(posts as Post[])]);
+  };
 
   const handleShowMore = async () => {
     setFetchingMore(true);
 
-    const { data: moreData } = await query<PostsQuery, PostsQueryVariables>(
-      PostsDocument,
-      {
-        limit: 10,
-        cursor
-      }
-    ).toPromise();
+    const { data } = await query<PostsQuery, PostsQueryVariables>(PostsDocument, {
+      limit: 10,
+      cursor
+    }).toPromise();
+
     setFetchingMore(false);
 
-    if (moreData?.posts) {
-      const morePosts = moreData.posts;
-
-      morePosts.length < 10 && setLoadAll(true);
-      setPosts(posts => [...posts, ...(morePosts as Post[])]);
-      morePosts.length && setCursor(morePosts.slice(-1)[0].createdAt);
+    if (data?.posts) {
+      setStateWithPosts(data.posts as Post[]);
     } else {
       setFetchErr(true);
     }
   };
 
-  useEffect(() => {
+  useAsyncEffect(async () => {
+    const { data } = await query<PostsQuery, PostsQueryVariables>(PostsDocument, {
+      limit: 10
+    }).toPromise();
+
     if (data?.posts) {
-      setPosts(data.posts as Post[]);
-      setCursor(data.posts.slice(-1)[0].createdAt);
+      setStateWithPosts(data.posts as Post[]);
     } else {
       setFetchErr(true);
     }
@@ -58,38 +69,63 @@ const Index = () => {
 
   return (
     <Layout>
-      <NextLink href="/create-post">
-        <Button colorScheme="teal">Create new post</Button>
-      </NextLink>
-      {!fetchErr ? (
-        <>
-          <Stack spacing={8} mt={8}>
-            {posts.map(({ id, title, text }) => (
-              <Box p={5} shadow="md" borderWidth="1px" key={id}>
-                <Heading fontSize="xl">{title}</Heading>
-                <Text mt={4} isTruncated>
-                  {text}
-                </Text>
-              </Box>
-            ))}
-          </Stack>
-          {!loadAll ? (
-            <Button
-              variant="link"
-              color="teal"
-              m={4}
-              fontSize="lg"
-              onClick={handleShowMore}
-              isLoading={fetchingMore}
-            >
-              Show more posts...
+      <Flex px={2} justify={posts.length ? 'space-between' : 'center'}>
+        <Heading pt={1} size="2xl">
+          LIREDDIT
+        </Heading>
+        {posts.length && (
+          <NextLink href="/create-post">
+            <Button colorScheme="teal" fontSize="lg">
+              Create new post
             </Button>
-          ) : (
-            <Divider orientation="horizontal" m={4} />
-          )}
-        </>
+          </NextLink>
+        )}
+      </Flex>
+      {!fetchErr ? (
+        posts.length ? (
+          <>
+            <Stack spacing={8} mt={6}>
+              {posts.map(({ id, title, textSnippet }) => (
+                <Box p={5} shadow="md" borderWidth="1px" key={id}>
+                  <Heading fontSize="xl">{title}</Heading>
+                  <Text mt={4}>{textSnippet}</Text>
+                </Box>
+              ))}
+            </Stack>
+            {!loadAll ? (
+              <Button
+                variant="link"
+                color="teal"
+                my={4}
+                ml={4}
+                fontSize="lg"
+                onClick={handleShowMore}
+                isLoading={fetchingMore}
+              >
+                Show more posts...
+              </Button>
+            ) : (
+              <Divider orientation="horizontal" my={4} />
+            )}
+          </>
+        ) : (
+          <Flex align="center" justify="center" height={300}>
+            <Box my={4}>
+              <Text fontSize="2xl" fontWeight="bold">
+                You got no posts, try to{' '}
+                <NextLink href="/create-post">
+                  <Link color="teal">create a new one ^_^</Link>
+                </NextLink>
+              </Text>
+            </Box>
+          </Flex>
+        )
       ) : (
-        <Box mt={5}>Error when fetching posts from server</Box>
+        <AlertBox
+          type="error"
+          title="Server Error"
+          desc="Failed to fetch the posts from server. Please try again later."
+        />
       )}
     </Layout>
   );

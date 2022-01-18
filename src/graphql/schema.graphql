@@ -27,6 +27,7 @@ type Post {
   id: Int!
   points: Float!
   text: String!
+  textSnippet: String!
   title: String!
   updatedAt: String!
 }
