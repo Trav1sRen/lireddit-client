@@ -8,6 +8,7 @@ import {
   LoginStateDocument,
   LoginStateQuery,
   LogoutMutation,
+  Post,
   PostsDocument,
   PostsQuery,
   PostsQueryVariables,
@@ -71,7 +72,9 @@ export const createUrqlClient = (ssrExchange: SSRExchange) => ({
             cache.updateQuery<PostsQuery, PostsQueryVariables>(
               { query: PostsDocument, variables: { limit: 10 } },
               prevData =>
-                createPost ? { posts: [createPost, ...prevData!.posts] } : prevData
+                createPost
+                  ? { posts: [createPost, ...prevData!.posts] as Post[] }
+                  : prevData
             );
           }
         }

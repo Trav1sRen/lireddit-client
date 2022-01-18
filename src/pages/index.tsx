@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useClient } from 'urql';
 import AlertBox from '../components/AlertBox';
 import useAsyncEffect from '../utils/useAsyncEffect';
+import { nanoid } from 'nanoid';
 
 const Index = () => {
   const [cursor, setCursor] = useState('');
@@ -69,11 +70,11 @@ const Index = () => {
 
   return (
     <Layout>
-      <Flex px={2} justify={posts.length ? 'space-between' : 'center'}>
-        <Heading pt={1} size="2xl">
+      <Flex px={2} align="center" justify={posts.length > 0 ? 'space-between' : 'center'}>
+        <Heading pt={2.5} size="2xl">
           LIREDDIT
         </Heading>
-        {posts.length && (
+        {posts.length > 0 && (
           <NextLink href="/create-post">
             <Button colorScheme="teal" fontSize="lg">
               Create new post
@@ -82,11 +83,12 @@ const Index = () => {
         )}
       </Flex>
       {!fetchErr ? (
-        posts.length ? (
+        posts.length > 0 ? (
           <>
             <Stack spacing={8} mt={6}>
-              {posts.map(({ id, title, textSnippet }) => (
-                <Box p={5} shadow="md" borderWidth="1px" key={id}>
+              {/* Using self-increment id causes error, nanoid is a workaround */}
+              {posts.map(({ title, textSnippet }) => (
+                <Box p={5} shadow="md" borderWidth="1px" key={nanoid(6)}>
                   <Heading fontSize="xl">{title}</Heading>
                   <Text mt={4}>{textSnippet}</Text>
                 </Box>

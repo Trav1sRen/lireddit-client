@@ -6,6 +6,7 @@ function useAsyncEffect(
 ) {
   return useEffect(() => {
     const cleanupPromise = effect();
+
     return () => {
       cleanupPromise.then(cleanup => cleanup && cleanup());
     };
