@@ -15,18 +15,13 @@ const theme = extendTheme({
         '.chakra-form__error-message': {
           fontWeight: 'semibold'
         }
-      },
-      '.chakra-stack': {
-        h2: {
-          fontFamily: 'PT Serif Caption'
-        }
       }
     }
   },
   colors: {
     black: '#16161D'
   },
-  fonts: { heading: 'Papyrus', body: 'Palatino', mono: `'PT Mono', monospace` },
+  fonts: { body: 'Palatino, sans-serif', mono: '"PT Mono", monospace' },
   breakpoints,
   icons: {
     logo: {

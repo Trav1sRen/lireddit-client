@@ -1,0 +1,10 @@
+fragment PostFragment on Post {
+  id
+  title
+  textSnippet
+  updatedAt
+  createdAt
+  creator {
+    ...UserFragment
+  }
+}

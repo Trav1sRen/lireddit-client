@@ -1,80 +1,43 @@
-import { withUrqlClient } from 'next-urql';
-import { createUrqlClient } from '../utils/createUrqlClient';
-import {
-  Post,
-  PostsDocument,
-  PostsQuery,
-  PostsQueryVariables
-} from '../generated/graphql';
-import Layout from '../components/Layout';
-import NextLink from 'next/link';
+import { PlusSquareIcon } from '@chakra-ui/icons';
 import { Box, Button, Divider, Flex, Heading, Link, Stack, Text } from '@chakra-ui/react';
-import { useState } from 'react';
-import { useClient } from 'urql';
-import AlertBox from '../components/AlertBox';
-import useAsyncEffect from '../utils/useAsyncEffect';
-import { nanoid } from 'nanoid';
+import { withUrqlClient } from 'next-urql';
+import NextLink from 'next/link';
+import { ReactNode, useState } from 'react';
+import Layout from '../components/Layout';
+import { PostsQueryVariables, usePostsQuery } from '../generated/graphql';
+import { createUrqlClient } from '../utils/createUrqlClient';
 
 const Index = () => {
-  const [cursor, setCursor] = useState('');
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [variables, setVariables] = useState<PostsQueryVariables>({ limit: 10 });
 
-  const [fetchErr, setFetchErr] = useState(false);
-  const [fetchingMore, setFetchingMore] = useState(false);
-  const [loadAll, setLoadAll] = useState(false);
+  /***
+   * Does urql put the variables into the useEffect dependency list?
+   * --- https://github.com/FormidableLabs/urql/discussions/2209
+   */
+  const [{ data, fetching }] = usePostsQuery({
+    variables
+  });
 
-  const { query } = useClient();
+  const userHasPosts = (): boolean =>
+    !fetching && !!data?.posts && data.posts.paginatedPosts.length > 0;
 
-  const getCursor = (posts: Post[]) => posts.slice(-1)[0].createdAt;
-
-  const setStateWithPosts = (posts: Post[]) => {
-    const { length } = posts;
-
-    if (length < 10) {
-      setLoadAll(true);
-    } else {
-      setCursor(getCursor(posts as Post[]));
-    }
-
-    length && setPosts(prevPosts => [...prevPosts, ...(posts as Post[])]);
-  };
-
-  const handleShowMore = async () => {
-    setFetchingMore(true);
-
-    const { data } = await query<PostsQuery, PostsQueryVariables>(PostsDocument, {
-      limit: 10,
-      cursor
-    }).toPromise();
-
-    setFetchingMore(false);
-
-    if (data?.posts) {
-      setStateWithPosts(data.posts as Post[]);
-    } else {
-      setFetchErr(true);
-    }
-  };
-
-  useAsyncEffect(async () => {
-    const { data } = await query<PostsQuery, PostsQueryVariables>(PostsDocument, {
-      limit: 10
-    }).toPromise();
-
-    if (data?.posts) {
-      setStateWithPosts(data.posts as Post[]);
-    } else {
-      setFetchErr(true);
-    }
-  }, []);
+  const noPostsArea = (text: ReactNode, color: string = 'black') => (
+    <Flex align="center" justify="center" height={300}>
+      <Box my={4}>
+        <Text fontSize="2xl" fontWeight="bold" color={color}>
+          {text}
+        </Text>
+      </Box>
+    </Flex>
+  );
 
   return (
     <Layout>
-      <Flex px={2} align="center" justify={posts.length > 0 ? 'space-between' : 'center'}>
-        <Heading pt={2.5} size="2xl">
+      <Flex px={2} align="center" justify={userHasPosts() ? 'space-between' : 'center'}>
+        <Heading pt={2.5} size="2xl" fontFamily="Papyrus, sans-serif">
           LIREDDIT
         </Heading>
-        {posts.length > 0 && (
+        {userHasPosts() && (
           <NextLink href="/create-post">
             <Button colorScheme="teal" fontSize="lg">
               Create new post
@@ -82,27 +45,42 @@ const Index = () => {
           </NextLink>
         )}
       </Flex>
-      {!fetchErr ? (
-        posts.length > 0 ? (
+      {fetching ? (
+        noPostsArea('Loading the posts from server...')
+      ) : data?.posts ? (
+        data.posts.paginatedPosts.length > 0 ? (
           <>
             <Stack spacing={8} mt={6}>
-              {/* Using self-increment id causes error, nanoid is a workaround */}
-              {posts.map(({ title, textSnippet }) => (
-                <Box p={5} shadow="md" borderWidth="1px" key={nanoid(6)}>
-                  <Heading fontSize="xl">{title}</Heading>
-                  <Text mt={4}>{textSnippet}</Text>
-                </Box>
-              ))}
+              {data.posts.paginatedPosts.map(
+                ({ id, title, textSnippet, creator: { username } }) => (
+                  <Box p={5} shadow="md" borderWidth="1px" key={id}>
+                    <Heading fontSize="xl" fontFamily="'PT Serif Caption', sans-serif">
+                      {title}
+                    </Heading>
+                    <Text mt={4}>{textSnippet}</Text>
+                    <Flex align="flex-end" direction="column">
+                      <Text fontSize="sm" fontFamily="Futura, sans-serif">
+                        {username}
+                      </Text>
+                    </Flex>
+                  </Box>
+                )
+              )}
             </Stack>
-            {!loadAll ? (
+            {data.posts.hasMore ? (
               <Button
                 variant="link"
                 color="teal"
                 my={4}
                 ml={4}
                 fontSize="lg"
-                onClick={handleShowMore}
-                isLoading={fetchingMore}
+                onClick={() =>
+                  setVariables(variables => ({
+                    ...variables,
+                    cursor: data.posts.paginatedPosts.slice(-1)[0].createdAt
+                  }))
+                }
+                isLoading={fetching}
               >
                 Show more posts...
               </Button>
@@ -111,23 +89,21 @@ const Index = () => {
             )}
           </>
         ) : (
-          <Flex align="center" justify="center" height={300}>
-            <Box my={4}>
-              <Text fontSize="2xl" fontWeight="bold">
-                You got no posts, try to{' '}
-                <NextLink href="/create-post">
-                  <Link color="teal">create a new one ^_^</Link>
-                </NextLink>
-              </Text>
-            </Box>
-          </Flex>
+          noPostsArea(
+            <>
+              You got no posts, try to{' '}
+              <NextLink href="/create-post">
+                <Link color="teal">create a new one</Link>
+              </NextLink>
+              <PlusSquareIcon ml={1} color="teal" />
+            </>
+          )
         )
       ) : (
-        <AlertBox
-          type="error"
-          title="Server Error"
-          desc="Failed to fetch the posts from server. Please try again later."
-        />
+        noPostsArea(
+          'Failed to fetch the posts from server. Please try again later...',
+          'red'
+        )
       )}
     </Layout>
   );

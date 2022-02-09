@@ -33,7 +33,7 @@ const Navbar = () => {
     );
   } else {
     navbarContent = (
-      <Flex align="baseline" fontFamily="Futura">
+      <Flex align="baseline" fontFamily="Futura, sans-serif">
         <Box mr={2}>{data.loginState.username}</Box>
         <Button
           variant="link"

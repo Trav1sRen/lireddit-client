@@ -1,0 +1,13 @@
+schema: http://localhost:7070/graphql
+documents: 'src/graphql/**/*.graphql'
+extensions:
+  codegen:
+    generates:
+      src/graphql/schema.graphql:
+        plugins:
+          - schema-ast
+      src/generated/graphql.ts:
+        plugins:
+          - 'typescript'
+          - 'typescript-operations'
+          - 'typescript-urql'
