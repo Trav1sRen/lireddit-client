@@ -1,5 +1,3 @@
-import { SSRExchange } from 'next-urql';
-import { dedupExchange, Exchange, fetchExchange, stringifyVariables } from 'urql';
 import {
   Cache,
   cacheExchange,
@@ -7,20 +5,35 @@ import {
   Resolver,
   Variables
 } from '@urql/exchange-graphcache';
+import { NextUrqlClientConfig } from 'next-urql';
+import Router from 'next/router';
+import { dedupExchange, Exchange, fetchExchange, stringifyVariables } from 'urql';
+import { pipe, tap } from 'wonka';
 import {
   ChangePasswordMutation,
+  CommentPostMutation,
+  CommentPostMutationVariables,
   CreatePostMutation,
   LoginMutation,
   LoginStateDocument,
   LoginStateQuery,
   LogoutMutation,
+  Post,
+  PostDocument,
+  PostQuery,
+  PostQueryVariables,
   PostsDocument,
   PostsQuery,
   PostsQueryVariables,
-  RegisterMutation
+  RegisterMutation,
+  Updoot,
+  VoteCommentMutation,
+  VoteCommentMutationVariables,
+  VoteMutation,
+  VoteMutationVariables,
+  VoteResponse
 } from '../generated/graphql';
-import { pipe, tap } from 'wonka';
-import Router from 'next/router';
+import { isServer } from './isServer';
 
 const cursorPagination = (): Resolver => {
   return (_parent, args: Variables, cache: Cache, info: ResolveInfo) => {
@@ -86,15 +99,28 @@ const errorExchange: Exchange =
       })
     );
 
-export const createUrqlClient = (ssrExchange: SSRExchange) => ({
+export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
   url: 'http://localhost:7070/graphql',
-  fetchOptions: { credentials: 'include' as RequestCredentials },
+  fetchOptions: {
+    credentials: 'include' as RequestCredentials,
+    headers: isServer()
+      ? // Manually add SSR cookie into request header
+        ({ cookie: ctx?.req?.headers.cookie } as HeadersInit)
+      : undefined
+  },
   exchanges: [
     dedupExchange,
     cacheExchange({
-      // This is to enable normalized cache instead of default document cache
+      /***
+       * 1. This is to enable normalized cache instead of default document cache
+       * 2. If response contains `id` and `__typename__`, urql will filter the cache with such creteria and auto-update it
+       **/
+
       keys: {
-        PaginatedPosts: () => null // Becos PaginatedPosts is embedded on parent key directly
+        PaginatedPosts: () => null, // Becos PaginatedPosts is embedded on parent key directly
+        PostComment: () => null,
+        Updoot: () => null,
+        User: () => null // The `User` object which is embedded on `PostComment`
       },
       resolvers: {
         // Client resolvers, run when query is executed
@@ -106,14 +132,14 @@ export const createUrqlClient = (ssrExchange: SSRExchange) => ({
         Mutation: {
           // User mutations
           login({ login: { user } }: LoginMutation, _args, cache) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, prevData =>
-              user ? { loginState: user } : prevData
+            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
+              user ? { loginState: user } : data
             );
           },
 
           register({ register: { user } }: RegisterMutation, _args, cache) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, prevData =>
-              user ? { loginState: user } : prevData
+            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
+              user ? { loginState: user } : data
             );
           },
 
@@ -122,14 +148,14 @@ export const createUrqlClient = (ssrExchange: SSRExchange) => ({
             _args,
             cache
           ) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, prevData =>
-              user ? { loginState: user } : prevData
+            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
+              user ? { loginState: user } : data
             );
           },
 
           logout({ logout }: LogoutMutation, _args, cache) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, prevData =>
-              logout ? { loginState: null } : prevData
+            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
+              logout ? { loginState: null } : data
             );
           },
 
@@ -137,17 +163,140 @@ export const createUrqlClient = (ssrExchange: SSRExchange) => ({
           createPost({ createPost }: CreatePostMutation, _args, cache) {
             cache.updateQuery<PostsQuery, PostsQueryVariables>(
               { query: PostsDocument, variables: { limit: 10 } },
-              prevData =>
-                createPost
-                  ? {
+              data => {
+                if (data) {
+                  if (createPost) {
+                    return {
                       posts: {
-                        paginatedPosts: [createPost, ...prevData!.posts.paginatedPosts],
-                        hasMore: prevData!.posts.hasMore,
+                        paginatedPosts: [createPost, ...data.posts.paginatedPosts],
+                        hasMore: data.posts.hasMore,
                         __typename: 'PaginatedPosts'
                       }
-                    }
-                  : prevData
+                    };
+                  } else {
+                    return data;
+                  }
+                } else {
+                  return null;
+                }
+              }
             );
+          },
+
+          vote({ vote }: VoteMutation, { postId }: VoteMutationVariables, cache) {
+            const updatePostUpdoot = (post: Post, vote: VoteResponse) => {
+              const userUpdootIdx = post.updoots.findIndex(
+                updoot =>
+                  updoot.user.id ===
+                  cache.readQuery<LoginStateQuery>({ query: LoginStateDocument })
+                    ?.loginState?.id
+              );
+
+              const {
+                vote: voteVal,
+                post: { creator, upvotes, downvotes }
+              } = vote;
+
+              post.upvotes = upvotes;
+              post.downvotes = downvotes;
+
+              if (voteVal === 0) {
+                userUpdootIdx > -1 && post.updoots.splice(userUpdootIdx, 1);
+              } else {
+                userUpdootIdx > -1
+                  ? (post.updoots[userUpdootIdx].vote = voteVal)
+                  : post.updoots.push({
+                      vote: voteVal,
+                      user: creator,
+                      __typename: 'Updoot'
+                    } as Updoot);
+              }
+            };
+
+            cache.updateQuery<PostsQuery, PostsQueryVariables>(
+              { query: PostsDocument, variables: { limit: 10 } },
+              data => {
+                if (data) {
+                  const posts = data.posts.paginatedPosts;
+
+                  if (vote) {
+                    const idx = posts.findIndex(post => post.id === postId);
+                    updatePostUpdoot(posts[idx] as Post, vote as VoteResponse);
+                  }
+
+                  return data;
+                } else {
+                  return null;
+                }
+              }
+            );
+
+            cache.updateQuery<PostQuery, PostQueryVariables>(
+              {
+                query: PostDocument,
+                variables: { id: postId }
+              },
+              data => {
+                if (data?.post) {
+                  const post = data.post;
+
+                  if (vote) {
+                    updatePostUpdoot(post as Post, vote as VoteResponse);
+                  }
+
+                  return data;
+                } else {
+                  return null;
+                }
+              }
+            );
+          },
+
+          // Comment mutations
+          commentPost(
+            { commentPost }: CommentPostMutation,
+            { postId }: CommentPostMutationVariables,
+            cache
+          ) {
+            commentPost &&
+              cache.updateQuery<PostQuery, PostQueryVariables>(
+                {
+                  query: PostDocument,
+                  variables: { id: postId }
+                },
+                data => {
+                  if (data?.post) {
+                    data.post.postComments.push(commentPost);
+                    data.post.comments += 1;
+
+                    return data;
+                  } else {
+                    return null;
+                  }
+                }
+              );
+          },
+
+          voteComment(
+            { voteComment }: VoteCommentMutation,
+            { postCommentUuid }: VoteCommentMutationVariables,
+            cache
+          ) {
+            voteComment &&
+              cache.updateQuery<PostQuery, PostQueryVariables>(
+                { query: PostDocument, variables: { id: voteComment.postId } },
+                data => {
+                  if (data?.post) {
+                    const commentIdx = data.post.postComments.findIndex(
+                      comment => comment.postCommentUuid === postCommentUuid
+                    );
+
+                    return data;
+                  } else {
+                    return null;
+                  }
+                }
+              );
           }
         }
       }

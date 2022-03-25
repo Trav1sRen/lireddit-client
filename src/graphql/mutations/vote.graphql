@@ -1,0 +1,13 @@
+mutation Vote($value: Int!, $postId: Int!) {
+  vote(value: $value, postId: $postId) {
+    vote
+    post {
+      id
+      creator {
+        ...UserFragment
+      }
+      upvotes
+      downvotes
+    }
+  }
+}

@@ -1,0 +1,10 @@
+query Post($id: Int!) {
+  post(id: $id) {
+    ...PostFragment
+    postComments {
+      ...PostCommentFragment
+    }
+    text
+    comments
+  }
+}

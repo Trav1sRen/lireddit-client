@@ -1,3 +1,7 @@
+type CommentUpdoot {
+  user: User!
+}
+
 type FieldError {
   field: String!
   message: String!
@@ -5,6 +9,7 @@ type FieldError {
 
 type Mutation {
   changePassword(newPassword: String!, uuid: String!): UserResponse!
+  commentPost(postId: Int!, text: String!): PostComment
   createPost(input: PostInput!): Post!
   deletePost(id: Int!): Boolean!
   forgetPassword(email: String!): Boolean!
@@ -12,7 +17,8 @@ type Mutation {
   logout: Boolean!
   register(input: UsernamePasswordInput!): UserResponse!
   updatePost(id: Int!, title: String): Post
-  vote(postId: Int!, value: Int!): Boolean!
+  vote(postId: Int!, value: Int!): VoteResponse
+  voteComment(postCommentUuid: String!): PostComment
 }
 
 type PaginatedPosts {
@@ -21,14 +27,29 @@ type PaginatedPosts {
 }
 
 type Post {
+  comments: Int!
   createdAt: String!
   creator: User!
+  downvotes: Int!
   id: Int!
-  points: Float!
+  postComments: [PostComment!]!
   text: String!
   textSnippet: String!
   title: String!
   updatedAt: String!
+  updoots: [Updoot!]!
+  upvotes: Int!
+}
+
+type PostComment {
+  commentUpdoots: [CommentUpdoot!]!
+  createdAt: String!
+  postCommentUuid: String!
+  postId: Int!
+  text: String!
+  updatedAt: String!
+  upvotes: Int!
+  user: User!
 }
 
 input PostInput {
@@ -40,6 +61,11 @@ type Query {
   loginState: User
   post(id: Int!): Post
   posts(cursor: String, limit: Int!): PaginatedPosts!
+}
+
+type Updoot {
+  user: User!
+  vote: Int!
 }
 
 type User {
@@ -59,4 +85,9 @@ input UsernamePasswordInput {
   email: String!
   password: String!
   username: String!
+}
+
+type VoteResponse {
+  post: Post!
+  vote: Int!
 }

@@ -1,0 +1,6 @@
+mutation VoteComment($postCommentUuid: String!) {
+  voteComment(postCommentUuid: $postCommentUuid) {
+    postId
+    upvotes
+  }
+}

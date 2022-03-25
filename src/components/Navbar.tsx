@@ -1,20 +1,15 @@
-import React from 'react';
 import { Box, Button, Flex, Link } from '@chakra-ui/react';
 import NextLink from 'next/link';
+import React from 'react';
 import { useLoginStateQuery, useLogoutMutation } from '../generated/graphql';
-import { isServer } from '../utils/isServer';
 
 const Navbar = () => {
-  const [{ data, fetching }] = useLoginStateQuery({
-    // Trigger SSR becos the data is used to render HTML
-    // Use dynamic isServer() check becos unsure about if Navbar is rendered on CSR or SSR page
-    pause: isServer() // To run this query on browser instead of on server
-  });
-  const [{ fetching: fetchingLogout }, logout] = useLogoutMutation(); // Won't trigger SSR as it is binded to event
+  const [{ data, fetching }] = useLoginStateQuery();
+  const [{ fetching: fetchingLogout }, logout] = useLogoutMutation();
 
   let navbarContent;
 
-  if (isServer() || fetching) {
+  if (fetching) {
     navbarContent = null;
   } else if (!data?.loginState) {
     navbarContent = (

@@ -4,7 +4,15 @@ fragment PostFragment on Post {
   textSnippet
   updatedAt
   createdAt
+  upvotes
+  downvotes
   creator {
     ...UserFragment
+  }
+  updoots {
+    vote
+    user {
+      ...UserFragment
+    }
   }
 }

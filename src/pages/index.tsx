@@ -1,10 +1,23 @@
 import { PlusSquareIcon } from '@chakra-ui/icons';
-import { Box, Button, Divider, Flex, Heading, Link, Stack, Text } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Divider,
+  Flex,
+  Heading,
+  Icon,
+  Link,
+  Stack,
+  Text
+} from '@chakra-ui/react';
 import { withUrqlClient } from 'next-urql';
 import NextLink from 'next/link';
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
+import { FaRegCommentDots } from 'react-icons/fa';
 import Layout from '../components/Layout';
-import { PostsQueryVariables, usePostsQuery } from '../generated/graphql';
+import NoContentField from '../components/NoContentField';
+import UpdootField from '../components/UpdootField';
+import { Post, PostsQueryVariables, usePostsQuery } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 
 const Index = () => {
@@ -21,16 +34,6 @@ const Index = () => {
   const userHasPosts = (): boolean =>
     !fetching && !!data?.posts && data.posts.paginatedPosts.length > 0;
 
-  const noPostsArea = (text: ReactNode, color: string = 'black') => (
-    <Flex align="center" justify="center" height={300}>
-      <Box my={4}>
-        <Text fontSize="2xl" fontWeight="bold" color={color}>
-          {text}
-        </Text>
-      </Box>
-    </Flex>
-  );
-
   return (
     <Layout>
       <Flex px={2} align="center" justify={userHasPosts() ? 'space-between' : 'center'}>
@@ -46,26 +49,52 @@ const Index = () => {
         )}
       </Flex>
       {fetching ? (
-        noPostsArea('Loading the posts from server...')
+        <NoContentField>Loading the posts from server...</NoContentField>
       ) : data?.posts ? (
         data.posts.paginatedPosts.length > 0 ? (
           <>
             <Stack spacing={8} mt={6}>
-              {data.posts.paginatedPosts.map(
-                ({ id, title, textSnippet, creator: { username } }) => (
+              {data.posts.paginatedPosts.map(post => {
+                const {
+                  id,
+                  title,
+                  textSnippet,
+                  creator: { username },
+                  comments
+                } = post;
+
+                return (
                   <Box p={5} shadow="md" borderWidth="1px" key={id}>
-                    <Heading fontSize="xl" fontFamily="'PT Serif Caption', sans-serif">
-                      {title}
-                    </Heading>
-                    <Text mt={4}>{textSnippet}</Text>
-                    <Flex align="flex-end" direction="column">
+                    <NextLink href={`/post/${id}`}>
+                      <Link _hover={{ textDecoration: 'none' }}>
+                        <Heading
+                          fontSize="xl"
+                          fontFamily="'PT Serif Caption', sans-serif"
+                        >
+                          {title}
+                        </Heading>
+                        <Text mt={4}>{textSnippet}</Text>
+                      </Link>
+                    </NextLink>
+                    <Flex mt={5} justify="space-between">
+                      <Flex align="center" justify="space-between" maxW={250} w="100%">
+                        <UpdootField post={post as Post} />
+                        <NextLink href={`/post/${id}#comments`}>
+                          <Flex align="center" cursor="pointer">
+                            <Icon as={FaRegCommentDots} w={5} h={5} />
+                            <Text ml={2} fontFamily="Georgia, sans-serif">
+                              {comments}
+                            </Text>
+                          </Flex>
+                        </NextLink>
+                      </Flex>
                       <Text fontSize="sm" fontFamily="Futura, sans-serif">
                         {username}
                       </Text>
                     </Flex>
                   </Box>
-                )
-              )}
+                );
+              })}
             </Stack>
             {data.posts.hasMore ? (
               <Button
@@ -89,24 +118,23 @@ const Index = () => {
             )}
           </>
         ) : (
-          noPostsArea(
-            <>
-              You got no posts, try to{' '}
-              <NextLink href="/create-post">
-                <Link color="teal">create a new one</Link>
-              </NextLink>
-              <PlusSquareIcon ml={1} color="teal" />
-            </>
-          )
+          <NoContentField>
+            You got no posts, try to{' '}
+            <NextLink href="/create-post">
+              <Link color="teal">create a new one</Link>
+            </NextLink>
+            <PlusSquareIcon ml={1} color="teal" />
+          </NoContentField>
         )
       ) : (
-        noPostsArea(
-          'Failed to fetch the posts from server. Please try again later...',
-          'red'
-        )
+        <NoContentField color="red">
+          Failed to fetch the posts from server. Please try again later...
+        </NoContentField>
       )}
     </Layout>
   );
 };
 
-export default withUrqlClient(createUrqlClient, { ssr: true })(Index); // This urql client will be applied to the child components as well (such as Navbar)
+export default withUrqlClient(createUrqlClient, {
+  ssr: true
+})(Index); // This urql client will be applied to the child components as well (such as Navbar)

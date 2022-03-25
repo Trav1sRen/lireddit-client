@@ -1,0 +1,5 @@
+mutation CommentPost($text: String!, $postId: Int!) {
+  commentPost(text: $text, postId: $postId) {
+    ...PostCommentFragment
+  }
+}

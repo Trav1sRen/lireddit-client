@@ -15,6 +15,11 @@ export type Scalars = {
   Float: number;
 };
 
+export type CommentUpdoot = {
+  __typename?: 'CommentUpdoot';
+  user: User;
+};
+
 export type FieldError = {
   __typename?: 'FieldError';
   field: Scalars['String'];
@@ -24,6 +29,7 @@ export type FieldError = {
 export type Mutation = {
   __typename?: 'Mutation';
   changePassword: UserResponse;
+  commentPost?: Maybe<PostComment>;
   createPost: Post;
   deletePost: Scalars['Boolean'];
   forgetPassword: Scalars['Boolean'];
@@ -31,13 +37,20 @@ export type Mutation = {
   logout: Scalars['Boolean'];
   register: UserResponse;
   updatePost?: Maybe<Post>;
-  vote: Scalars['Boolean'];
+  vote?: Maybe<VoteResponse>;
+  voteComment?: Maybe<PostComment>;
 };
 
 
 export type MutationChangePasswordArgs = {
   newPassword: Scalars['String'];
   uuid: Scalars['String'];
+};
+
+
+export type MutationCommentPostArgs = {
+  postId: Scalars['Int'];
+  text: Scalars['String'];
 };
 
 
@@ -78,6 +91,11 @@ export type MutationVoteArgs = {
   value: Scalars['Int'];
 };
 
+
+export type MutationVoteCommentArgs = {
+  postCommentUuid: Scalars['String'];
+};
+
 export type PaginatedPosts = {
   __typename?: 'PaginatedPosts';
   hasMore: Scalars['Boolean'];
@@ -86,14 +104,30 @@ export type PaginatedPosts = {
 
 export type Post = {
   __typename?: 'Post';
+  comments: Scalars['Int'];
   createdAt: Scalars['String'];
   creator: User;
+  downvotes: Scalars['Int'];
   id: Scalars['Int'];
-  points: Scalars['Float'];
+  postComments: Array<PostComment>;
   text: Scalars['String'];
   textSnippet: Scalars['String'];
   title: Scalars['String'];
   updatedAt: Scalars['String'];
+  updoots: Array<Updoot>;
+  upvotes: Scalars['Int'];
+};
+
+export type PostComment = {
+  __typename?: 'PostComment';
+  commentUpdoots: Array<CommentUpdoot>;
+  createdAt: Scalars['String'];
+  postCommentUuid: Scalars['String'];
+  postId: Scalars['Int'];
+  text: Scalars['String'];
+  updatedAt: Scalars['String'];
+  upvotes: Scalars['Int'];
+  user: User;
 };
 
 export type PostInput = {
@@ -119,6 +153,12 @@ export type QueryPostsArgs = {
   limit: Scalars['Int'];
 };
 
+export type Updoot = {
+  __typename?: 'Updoot';
+  user: User;
+  vote: Scalars['Int'];
+};
+
 export type User = {
   __typename?: 'User';
   createdAt: Scalars['String'];
@@ -140,9 +180,17 @@ export type UsernamePasswordInput = {
   username: Scalars['String'];
 };
 
+export type VoteResponse = {
+  __typename?: 'VoteResponse';
+  post: Post;
+  vote: Scalars['Int'];
+};
+
 export type ErrorFragmentFragment = { __typename?: 'FieldError', field: string, message: string };
 
-export type PostFragmentFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, creator: { __typename?: 'User', id: number, username: string } };
+export type PostCommentFragmentFragment = { __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', id: number, username: string } }> };
+
+export type PostFragmentFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> };
 
 export type UserFragmentFragment = { __typename?: 'User', id: number, username: string };
 
@@ -156,12 +204,20 @@ export type ChangePasswordMutationVariables = Exact<{
 
 export type ChangePasswordMutation = { __typename?: 'Mutation', changePassword: { __typename?: 'UserResponse', user?: { __typename?: 'User', id: number, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
 
+export type CommentPostMutationVariables = Exact<{
+  text: Scalars['String'];
+  postId: Scalars['Int'];
+}>;
+
+
+export type CommentPostMutation = { __typename?: 'Mutation', commentPost?: { __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', id: number, username: string } }> } | null | undefined };
+
 export type CreatePostMutationVariables = Exact<{
   input: PostInput;
 }>;
 
 
-export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'Post', id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, creator: { __typename?: 'User', id: number, username: string } } };
+export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'Post', comments: number, id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> } };
 
 export type ForgetPasswordMutationVariables = Exact<{
   email: Scalars['String'];
@@ -190,10 +246,32 @@ export type RegisterMutationVariables = Exact<{
 
 export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'UserResponse', user?: { __typename?: 'User', id: number, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
 
+export type VoteMutationVariables = Exact<{
+  value: Scalars['Int'];
+  postId: Scalars['Int'];
+}>;
+
+
+export type VoteMutation = { __typename?: 'Mutation', vote?: { __typename?: 'VoteResponse', vote: number, post: { __typename?: 'Post', id: number, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string } } } | null | undefined };
+
+export type VoteCommentMutationVariables = Exact<{
+  postCommentUuid: Scalars['String'];
+}>;
+
+
+export type VoteCommentMutation = { __typename?: 'Mutation', voteComment?: { __typename?: 'PostComment', postId: number, upvotes: number } | null | undefined };
+
 export type LoginStateQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type LoginStateQuery = { __typename?: 'Query', loginState?: { __typename?: 'User', id: number, username: string } | null | undefined };
+
+export type PostQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type PostQuery = { __typename?: 'Query', post?: { __typename?: 'Post', text: string, comments: number, id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, postComments: Array<{ __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', id: number, username: string } }> }>, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> } | null | undefined };
 
 export type PostsQueryVariables = Exact<{
   limit: Scalars['Int'];
@@ -201,7 +279,7 @@ export type PostsQueryVariables = Exact<{
 }>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', hasMore: boolean, paginatedPosts: Array<{ __typename?: 'Post', id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, creator: { __typename?: 'User', id: number, username: string } }> } };
+export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', hasMore: boolean, paginatedPosts: Array<{ __typename?: 'Post', comments: number, id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> }> } };
 
 export const UserFragmentFragmentDoc = gql`
     fragment UserFragment on User {
@@ -209,6 +287,22 @@ export const UserFragmentFragmentDoc = gql`
   username
 }
     `;
+export const PostCommentFragmentFragmentDoc = gql`
+    fragment PostCommentFragment on PostComment {
+  postCommentUuid
+  text
+  user {
+    username
+  }
+  createdAt
+  upvotes
+  commentUpdoots {
+    user {
+      ...UserFragment
+    }
+  }
+}
+    ${UserFragmentFragmentDoc}`;
 export const PostFragmentFragmentDoc = gql`
     fragment PostFragment on Post {
   id
@@ -216,8 +310,16 @@ export const PostFragmentFragmentDoc = gql`
   textSnippet
   updatedAt
   createdAt
+  upvotes
+  downvotes
   creator {
     ...UserFragment
+  }
+  updoots {
+    vote
+    user {
+      ...UserFragment
+    }
   }
 }
     ${UserFragmentFragmentDoc}`;
@@ -249,10 +351,22 @@ export const ChangePasswordDocument = gql`
 export function useChangePasswordMutation() {
   return Urql.useMutation<ChangePasswordMutation, ChangePasswordMutationVariables>(ChangePasswordDocument);
 };
+export const CommentPostDocument = gql`
+    mutation CommentPost($text: String!, $postId: Int!) {
+  commentPost(text: $text, postId: $postId) {
+    ...PostCommentFragment
+  }
+}
+    ${PostCommentFragmentFragmentDoc}`;
+
+export function useCommentPostMutation() {
+  return Urql.useMutation<CommentPostMutation, CommentPostMutationVariables>(CommentPostDocument);
+};
 export const CreatePostDocument = gql`
     mutation CreatePost($input: PostInput!) {
   createPost(input: $input) {
     ...PostFragment
+    comments
   }
 }
     ${PostFragmentFragmentDoc}`;
@@ -300,6 +414,37 @@ export const RegisterDocument = gql`
 export function useRegisterMutation() {
   return Urql.useMutation<RegisterMutation, RegisterMutationVariables>(RegisterDocument);
 };
+export const VoteDocument = gql`
+    mutation Vote($value: Int!, $postId: Int!) {
+  vote(value: $value, postId: $postId) {
+    vote
+    post {
+      id
+      creator {
+        ...UserFragment
+      }
+      upvotes
+      downvotes
+    }
+  }
+}
+    ${UserFragmentFragmentDoc}`;
+
+export function useVoteMutation() {
+  return Urql.useMutation<VoteMutation, VoteMutationVariables>(VoteDocument);
+};
+export const VoteCommentDocument = gql`
+    mutation VoteComment($postCommentUuid: String!) {
+  voteComment(postCommentUuid: $postCommentUuid) {
+    postId
+    upvotes
+  }
+}
+    `;
+
+export function useVoteCommentMutation() {
+  return Urql.useMutation<VoteCommentMutation, VoteCommentMutationVariables>(VoteCommentDocument);
+};
 export const LoginStateDocument = gql`
     query LoginState {
   loginState {
@@ -311,11 +456,29 @@ export const LoginStateDocument = gql`
 export function useLoginStateQuery(options: Omit<Urql.UseQueryArgs<LoginStateQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<LoginStateQuery>({ query: LoginStateDocument, ...options });
 };
+export const PostDocument = gql`
+    query Post($id: Int!) {
+  post(id: $id) {
+    ...PostFragment
+    postComments {
+      ...PostCommentFragment
+    }
+    text
+    comments
+  }
+}
+    ${PostFragmentFragmentDoc}
+${PostCommentFragmentFragmentDoc}`;
+
+export function usePostQuery(options: Omit<Urql.UseQueryArgs<PostQueryVariables>, 'query'> = {}) {
+  return Urql.useQuery<PostQuery>({ query: PostDocument, ...options });
+};
 export const PostsDocument = gql`
     query Posts($limit: Int!, $cursor: String) {
   posts(limit: $limit, cursor: $cursor) {
     paginatedPosts {
       ...PostFragment
+      comments
     }
     hasMore
   }

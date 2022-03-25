@@ -1,0 +1,14 @@
+fragment PostCommentFragment on PostComment {
+  postCommentUuid
+  text
+  user {
+    username
+  }
+  createdAt
+  upvotes
+  commentUpdoots {
+    user {
+      ...UserFragment
+    }
+  }
+}
