@@ -3,7 +3,7 @@ documents: 'src/graphql/**/*.graphql'
 extensions:
   codegen:
     generates:
-      src/graphql/schema.graphql:
+      schema.graphql:
         plugins:
           - schema-ast
       src/generated/graphql.ts:
