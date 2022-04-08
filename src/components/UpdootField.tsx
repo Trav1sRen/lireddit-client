@@ -23,9 +23,11 @@ const UpdootField = ({
 }: UpdootFieldProps) => {
   const [{ data }] = useLoginStateQuery();
   const [, vote] = useVoteMutation();
-  const { id, upvotes, downvotes, updoots } = post;
+  const { postUuid, upvotes, downvotes, updoots } = post;
 
-  const userUpdoot = updoots.filter(updoot => updoot.user.id === data?.loginState?.id);
+  const userUpdoot = updoots.filter(
+    updoot => updoot.user.userUuid === data?.loginState?.userUuid
+  );
 
   return (
     <Flex align="center">
@@ -38,7 +40,7 @@ const UpdootField = ({
         w={iconWidth}
         h={iconHeight}
         ml={2}
-        onClick={async () => await vote({ postId: id, value: 1 })}
+        onClick={async () => await vote({ postUuid, value: 1 })}
       />
       <Text ml={6} fontSize={numberSize} fontFamily="Georgia, sans-serif">
         {downvotes}
@@ -53,7 +55,7 @@ const UpdootField = ({
         w={iconWidth}
         h={iconHeight}
         ml={2}
-        onClick={async () => await vote({ postId: id, value: -1 })}
+        onClick={async () => await vote({ postUuid, value: -1 })}
       />
     </Flex>
   );

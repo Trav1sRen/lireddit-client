@@ -1,5 +1,5 @@
 mutation Register($input: UsernamePasswordInput!) {
   register(input: $input) {
-    ...UserResponseFragment
+    ...UserResponse
   }
 }

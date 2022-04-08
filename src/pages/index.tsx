@@ -27,7 +27,13 @@ const Index = () => {
    * Does urql put the variables into the useEffect dependency list?
    * --- https://github.com/FormidableLabs/urql/discussions/2209
    */
-  const [{ data, fetching }] = usePostsQuery({
+  const [
+    {
+      data,
+      fetching,
+      error // This error object is constructed by `networkError` and `graphQLErrors`
+    }
+  ] = usePostsQuery({
     variables
   });
 
@@ -50,13 +56,13 @@ const Index = () => {
       </Flex>
       {fetching ? (
         <NoContentField>Loading the posts from server...</NoContentField>
-      ) : data?.posts ? (
+      ) : !error && data?.posts ? (
         data.posts.paginatedPosts.length > 0 ? (
           <>
             <Stack spacing={8} mt={6}>
               {data.posts.paginatedPosts.map(post => {
                 const {
-                  id,
+                  postUuid,
                   title,
                   textSnippet,
                   creator: { username },
@@ -64,8 +70,8 @@ const Index = () => {
                 } = post;
 
                 return (
-                  <Box p={5} shadow="md" borderWidth="1px" key={id}>
-                    <NextLink href={`/post/${id}`}>
+                  <Box p={5} shadow="md" borderWidth="1px" key={postUuid}>
+                    <NextLink href={`/post/${postUuid}`}>
                       <Link _hover={{ textDecoration: 'none' }}>
                         <Heading
                           fontSize="xl"
@@ -79,7 +85,7 @@ const Index = () => {
                     <Flex mt={5} justify="space-between">
                       <Flex align="center" justify="space-between" maxW={250} w="100%">
                         <UpdootField post={post as Post} />
-                        <NextLink href={`/post/${id}#comments`}>
+                        <NextLink href={`/post/${postUuid}#comments`}>
                           <Flex align="center" cursor="pointer">
                             <Icon as={FaRegCommentDots} w={5} h={5} />
                             <Text ml={2} fontFamily="Georgia, sans-serif">

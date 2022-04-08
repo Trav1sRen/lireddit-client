@@ -1,5 +1,5 @@
-fragment PostFragment on Post {
-  id
+fragment Post on Post {
+  postUuid
   title
   textSnippet
   updatedAt
@@ -7,12 +7,12 @@ fragment PostFragment on Post {
   upvotes
   downvotes
   creator {
-    ...UserFragment
+    ...User
   }
   updoots {
     vote
     user {
-      ...UserFragment
+      ...User
     }
   }
 }

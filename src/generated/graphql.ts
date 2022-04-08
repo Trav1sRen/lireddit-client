@@ -29,16 +29,16 @@ export type FieldError = {
 export type Mutation = {
   __typename?: 'Mutation';
   changePassword: UserResponse;
-  commentPost?: Maybe<PostComment>;
-  createPost: Post;
+  commentPost: Scalars['Boolean'];
+  createPost: Scalars['Boolean'];
   deletePost: Scalars['Boolean'];
   forgetPassword: Scalars['Boolean'];
   login: UserResponse;
   logout: Scalars['Boolean'];
   register: UserResponse;
-  updatePost?: Maybe<Post>;
-  vote?: Maybe<VoteResponse>;
-  voteComment?: Maybe<PostComment>;
+  updatePost: Scalars['Boolean'];
+  vote: Scalars['Boolean'];
+  voteComment: Scalars['Boolean'];
 };
 
 
@@ -49,7 +49,7 @@ export type MutationChangePasswordArgs = {
 
 
 export type MutationCommentPostArgs = {
-  postId: Scalars['Int'];
+  postUuid: Scalars['String'];
   text: Scalars['String'];
 };
 
@@ -60,7 +60,7 @@ export type MutationCreatePostArgs = {
 
 
 export type MutationDeletePostArgs = {
-  id: Scalars['Int'];
+  postUuid: Scalars['String'];
 };
 
 
@@ -81,13 +81,13 @@ export type MutationRegisterArgs = {
 
 
 export type MutationUpdatePostArgs = {
-  id: Scalars['Int'];
-  title?: InputMaybe<Scalars['String']>;
+  postUuid: Scalars['String'];
+  title: Scalars['String'];
 };
 
 
 export type MutationVoteArgs = {
-  postId: Scalars['Int'];
+  postUuid: Scalars['String'];
   value: Scalars['Int'];
 };
 
@@ -108,8 +108,8 @@ export type Post = {
   createdAt: Scalars['String'];
   creator: User;
   downvotes: Scalars['Int'];
-  id: Scalars['Int'];
   postComments: Array<PostComment>;
+  postUuid: Scalars['String'];
   text: Scalars['String'];
   textSnippet: Scalars['String'];
   title: Scalars['String'];
@@ -123,7 +123,6 @@ export type PostComment = {
   commentUpdoots: Array<CommentUpdoot>;
   createdAt: Scalars['String'];
   postCommentUuid: Scalars['String'];
-  postId: Scalars['Int'];
   text: Scalars['String'];
   updatedAt: Scalars['String'];
   upvotes: Scalars['Int'];
@@ -138,13 +137,13 @@ export type PostInput = {
 export type Query = {
   __typename?: 'Query';
   loginState?: Maybe<User>;
-  post?: Maybe<Post>;
+  post: Post;
   posts: PaginatedPosts;
 };
 
 
 export type QueryPostArgs = {
-  id: Scalars['Int'];
+  postUuid: Scalars['String'];
 };
 
 
@@ -163,8 +162,8 @@ export type User = {
   __typename?: 'User';
   createdAt: Scalars['String'];
   email: Scalars['String'];
-  id: Scalars['Int'];
   updatedAt: Scalars['String'];
+  userUuid: Scalars['String'];
   username: Scalars['String'];
 };
 
@@ -180,21 +179,15 @@ export type UsernamePasswordInput = {
   username: Scalars['String'];
 };
 
-export type VoteResponse = {
-  __typename?: 'VoteResponse';
-  post: Post;
-  vote: Scalars['Int'];
-};
+export type ErrorFragment = { __typename?: 'FieldError', field: string, message: string };
 
-export type ErrorFragmentFragment = { __typename?: 'FieldError', field: string, message: string };
+export type PostFragment = { __typename?: 'Post', postUuid: string, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', userUuid: string, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', userUuid: string, username: string } }> };
 
-export type PostCommentFragmentFragment = { __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', id: number, username: string } }> };
+export type PostCommentFragment = { __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', userUuid: string, username: string } }> };
 
-export type PostFragmentFragment = { __typename?: 'Post', id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> };
+export type UserFragment = { __typename?: 'User', userUuid: string, username: string };
 
-export type UserFragmentFragment = { __typename?: 'User', id: number, username: string };
-
-export type UserResponseFragmentFragment = { __typename?: 'UserResponse', user?: { __typename?: 'User', id: number, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined };
+export type UserResponseFragment = { __typename?: 'UserResponse', user?: { __typename?: 'User', userUuid: string, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined };
 
 export type ChangePasswordMutationVariables = Exact<{
   newPassword: Scalars['String'];
@@ -202,22 +195,22 @@ export type ChangePasswordMutationVariables = Exact<{
 }>;
 
 
-export type ChangePasswordMutation = { __typename?: 'Mutation', changePassword: { __typename?: 'UserResponse', user?: { __typename?: 'User', id: number, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
+export type ChangePasswordMutation = { __typename?: 'Mutation', changePassword: { __typename?: 'UserResponse', user?: { __typename?: 'User', userUuid: string, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
 
 export type CommentPostMutationVariables = Exact<{
   text: Scalars['String'];
-  postId: Scalars['Int'];
+  postUuid: Scalars['String'];
 }>;
 
 
-export type CommentPostMutation = { __typename?: 'Mutation', commentPost?: { __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', id: number, username: string } }> } | null | undefined };
+export type CommentPostMutation = { __typename?: 'Mutation', commentPost: boolean };
 
 export type CreatePostMutationVariables = Exact<{
   input: PostInput;
 }>;
 
 
-export type CreatePostMutation = { __typename?: 'Mutation', createPost: { __typename?: 'Post', comments: number, id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> } };
+export type CreatePostMutation = { __typename?: 'Mutation', createPost: boolean };
 
 export type ForgetPasswordMutationVariables = Exact<{
   email: Scalars['String'];
@@ -232,7 +225,7 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'UserResponse', user?: { __typename?: 'User', id: number, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
+export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'UserResponse', user?: { __typename?: 'User', userUuid: string, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
 
 export type LogoutMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -244,34 +237,34 @@ export type RegisterMutationVariables = Exact<{
 }>;
 
 
-export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'UserResponse', user?: { __typename?: 'User', id: number, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
+export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'UserResponse', user?: { __typename?: 'User', userUuid: string, username: string } | null | undefined, errors?: Array<{ __typename?: 'FieldError', field: string, message: string }> | null | undefined } };
 
 export type VoteMutationVariables = Exact<{
   value: Scalars['Int'];
-  postId: Scalars['Int'];
+  postUuid: Scalars['String'];
 }>;
 
 
-export type VoteMutation = { __typename?: 'Mutation', vote?: { __typename?: 'VoteResponse', vote: number, post: { __typename?: 'Post', id: number, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string } } } | null | undefined };
+export type VoteMutation = { __typename?: 'Mutation', vote: boolean };
 
 export type VoteCommentMutationVariables = Exact<{
   postCommentUuid: Scalars['String'];
 }>;
 
 
-export type VoteCommentMutation = { __typename?: 'Mutation', voteComment?: { __typename?: 'PostComment', postId: number, upvotes: number } | null | undefined };
+export type VoteCommentMutation = { __typename?: 'Mutation', voteComment: boolean };
 
 export type LoginStateQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type LoginStateQuery = { __typename?: 'Query', loginState?: { __typename?: 'User', id: number, username: string } | null | undefined };
+export type LoginStateQuery = { __typename?: 'Query', loginState?: { __typename?: 'User', userUuid: string, username: string } | null | undefined };
 
 export type PostQueryVariables = Exact<{
-  id: Scalars['Int'];
+  postUuid: Scalars['String'];
 }>;
 
 
-export type PostQuery = { __typename?: 'Query', post?: { __typename?: 'Post', text: string, comments: number, id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, postComments: Array<{ __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', id: number, username: string } }> }>, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> } | null | undefined };
+export type PostQuery = { __typename?: 'Query', post: { __typename?: 'Post', text: string, comments: number, postUuid: string, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, postComments: Array<{ __typename?: 'PostComment', postCommentUuid: string, text: string, createdAt: string, upvotes: number, user: { __typename?: 'User', username: string }, commentUpdoots: Array<{ __typename?: 'CommentUpdoot', user: { __typename?: 'User', userUuid: string, username: string } }> }>, creator: { __typename?: 'User', userUuid: string, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', userUuid: string, username: string } }> } };
 
 export type PostsQueryVariables = Exact<{
   limit: Scalars['Int'];
@@ -279,16 +272,36 @@ export type PostsQueryVariables = Exact<{
 }>;
 
 
-export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', hasMore: boolean, paginatedPosts: Array<{ __typename?: 'Post', comments: number, id: number, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', id: number, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', id: number, username: string } }> }> } };
+export type PostsQuery = { __typename?: 'Query', posts: { __typename?: 'PaginatedPosts', hasMore: boolean, paginatedPosts: Array<{ __typename?: 'Post', comments: number, postUuid: string, title: string, textSnippet: string, updatedAt: string, createdAt: string, upvotes: number, downvotes: number, creator: { __typename?: 'User', userUuid: string, username: string }, updoots: Array<{ __typename?: 'Updoot', vote: number, user: { __typename?: 'User', userUuid: string, username: string } }> }> } };
 
-export const UserFragmentFragmentDoc = gql`
-    fragment UserFragment on User {
-  id
+export const UserFragmentDoc = gql`
+    fragment User on User {
+  userUuid
   username
 }
     `;
-export const PostCommentFragmentFragmentDoc = gql`
-    fragment PostCommentFragment on PostComment {
+export const PostFragmentDoc = gql`
+    fragment Post on Post {
+  postUuid
+  title
+  textSnippet
+  updatedAt
+  createdAt
+  upvotes
+  downvotes
+  creator {
+    ...User
+  }
+  updoots {
+    vote
+    user {
+      ...User
+    }
+  }
+}
+    ${UserFragmentDoc}`;
+export const PostCommentFragmentDoc = gql`
+    fragment PostComment on PostComment {
   postCommentUuid
   text
   user {
@@ -298,78 +311,53 @@ export const PostCommentFragmentFragmentDoc = gql`
   upvotes
   commentUpdoots {
     user {
-      ...UserFragment
+      ...User
     }
   }
 }
-    ${UserFragmentFragmentDoc}`;
-export const PostFragmentFragmentDoc = gql`
-    fragment PostFragment on Post {
-  id
-  title
-  textSnippet
-  updatedAt
-  createdAt
-  upvotes
-  downvotes
-  creator {
-    ...UserFragment
-  }
-  updoots {
-    vote
-    user {
-      ...UserFragment
-    }
-  }
-}
-    ${UserFragmentFragmentDoc}`;
-export const ErrorFragmentFragmentDoc = gql`
-    fragment ErrorFragment on FieldError {
+    ${UserFragmentDoc}`;
+export const ErrorFragmentDoc = gql`
+    fragment Error on FieldError {
   field
   message
 }
     `;
-export const UserResponseFragmentFragmentDoc = gql`
-    fragment UserResponseFragment on UserResponse {
+export const UserResponseFragmentDoc = gql`
+    fragment UserResponse on UserResponse {
   user {
-    ...UserFragment
+    ...User
   }
   errors {
-    ...ErrorFragment
+    ...Error
   }
 }
-    ${UserFragmentFragmentDoc}
-${ErrorFragmentFragmentDoc}`;
+    ${UserFragmentDoc}
+${ErrorFragmentDoc}`;
 export const ChangePasswordDocument = gql`
     mutation ChangePassword($newPassword: String!, $uuid: String!) {
   changePassword(newPassword: $newPassword, uuid: $uuid) {
-    ...UserResponseFragment
+    ...UserResponse
   }
 }
-    ${UserResponseFragmentFragmentDoc}`;
+    ${UserResponseFragmentDoc}`;
 
 export function useChangePasswordMutation() {
   return Urql.useMutation<ChangePasswordMutation, ChangePasswordMutationVariables>(ChangePasswordDocument);
 };
 export const CommentPostDocument = gql`
-    mutation CommentPost($text: String!, $postId: Int!) {
-  commentPost(text: $text, postId: $postId) {
-    ...PostCommentFragment
-  }
+    mutation CommentPost($text: String!, $postUuid: String!) {
+  commentPost(text: $text, postUuid: $postUuid)
 }
-    ${PostCommentFragmentFragmentDoc}`;
+    `;
 
 export function useCommentPostMutation() {
   return Urql.useMutation<CommentPostMutation, CommentPostMutationVariables>(CommentPostDocument);
 };
 export const CreatePostDocument = gql`
     mutation CreatePost($input: PostInput!) {
-  createPost(input: $input) {
-    ...PostFragment
-    comments
-  }
+  createPost(input: $input)
 }
-    ${PostFragmentFragmentDoc}`;
+    `;
 
 export function useCreatePostMutation() {
   return Urql.useMutation<CreatePostMutation, CreatePostMutationVariables>(CreatePostDocument);
@@ -386,10 +374,10 @@ export function useForgetPasswordMutation() {
 export const LoginDocument = gql`
     mutation Login($usernameOrEmail: String!, $password: String!) {
   login(usernameOrEmail: $usernameOrEmail, password: $password) {
-    ...UserResponseFragment
+    ...UserResponse
   }
 }
-    ${UserResponseFragmentFragmentDoc}`;
+    ${UserResponseFragmentDoc}`;
 
 export function useLoginMutation() {
   return Urql.useMutation<LoginMutation, LoginMutationVariables>(LoginDocument);
@@ -406,39 +394,26 @@ export function useLogoutMutation() {
 export const RegisterDocument = gql`
     mutation Register($input: UsernamePasswordInput!) {
   register(input: $input) {
-    ...UserResponseFragment
+    ...UserResponse
   }
 }
-    ${UserResponseFragmentFragmentDoc}`;
+    ${UserResponseFragmentDoc}`;
 
 export function useRegisterMutation() {
   return Urql.useMutation<RegisterMutation, RegisterMutationVariables>(RegisterDocument);
 };
 export const VoteDocument = gql`
-    mutation Vote($value: Int!, $postId: Int!) {
-  vote(value: $value, postId: $postId) {
-    vote
-    post {
-      id
-      creator {
-        ...UserFragment
-      }
-      upvotes
-      downvotes
-    }
-  }
+    mutation Vote($value: Int!, $postUuid: String!) {
+  vote(value: $value, postUuid: $postUuid)
 }
-    ${UserFragmentFragmentDoc}`;
+    `;
 
 export function useVoteMutation() {
   return Urql.useMutation<VoteMutation, VoteMutationVariables>(VoteDocument);
 };
 export const VoteCommentDocument = gql`
     mutation VoteComment($postCommentUuid: String!) {
-  voteComment(postCommentUuid: $postCommentUuid) {
-    postId
-    upvotes
-  }
+  voteComment(postCommentUuid: $postCommentUuid)
 }
     `;
 
@@ -448,27 +423,27 @@ export function useVoteCommentMutation() {
 export const LoginStateDocument = gql`
     query LoginState {
   loginState {
-    ...UserFragment
+    ...User
   }
 }
-    ${UserFragmentFragmentDoc}`;
+    ${UserFragmentDoc}`;
 
 export function useLoginStateQuery(options: Omit<Urql.UseQueryArgs<LoginStateQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<LoginStateQuery>({ query: LoginStateDocument, ...options });
 };
 export const PostDocument = gql`
-    query Post($id: Int!) {
-  post(id: $id) {
-    ...PostFragment
-    postComments {
-      ...PostCommentFragment
-    }
+    query Post($postUuid: String!) {
+  post(postUuid: $postUuid) {
+    ...Post
     text
+    postComments {
+      ...PostComment
+    }
     comments
   }
 }
-    ${PostFragmentFragmentDoc}
-${PostCommentFragmentFragmentDoc}`;
+    ${PostFragmentDoc}
+${PostCommentFragmentDoc}`;
 
 export function usePostQuery(options: Omit<Urql.UseQueryArgs<PostQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<PostQuery>({ query: PostDocument, ...options });
@@ -477,13 +452,13 @@ export const PostsDocument = gql`
     query Posts($limit: Int!, $cursor: String) {
   posts(limit: $limit, cursor: $cursor) {
     paginatedPosts {
-      ...PostFragment
+      ...Post
       comments
     }
     hasMore
   }
 }
-    ${PostFragmentFragmentDoc}`;
+    ${PostFragmentDoc}`;
 
 export function usePostsQuery(options: Omit<Urql.UseQueryArgs<PostsQueryVariables>, 'query'> = {}) {
   return Urql.useQuery<PostsQuery>({ query: PostsDocument, ...options });

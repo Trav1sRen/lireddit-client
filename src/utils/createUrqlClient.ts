@@ -19,19 +19,16 @@ import {
   LoginStateQuery,
   LogoutMutation,
   Post,
-  PostDocument,
-  PostQuery,
+  PostComment,
+  PostCommentFragmentDoc,
+  PostFragmentDoc,
   PostQueryVariables,
-  PostsDocument,
-  PostsQuery,
-  PostsQueryVariables,
   RegisterMutation,
-  Updoot,
+  User,
   VoteCommentMutation,
   VoteCommentMutationVariables,
   VoteMutation,
-  VoteMutationVariables,
-  VoteResponse
+  VoteMutationVariables
 } from '../generated/graphql';
 import { isServer } from './isServer';
 
@@ -99,6 +96,11 @@ const errorExchange: Exchange =
       })
     );
 
+const readLoginUserFromCache = (cache: Cache) =>
+  cache.readQuery<LoginStateQuery>({
+    query: LoginStateDocument
+  })?.loginState;
+
 export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
   url: 'http://localhost:7070/graphql',
   fetchOptions: {
@@ -131,150 +133,108 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
       updates: {
         Mutation: {
           // User mutations
-          login({ login: { user } }: LoginMutation, _args, cache) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
-              user ? { loginState: user } : data
-            );
+          login({ login: { user } }: LoginMutation, _, cache) {
+            user &&
+              cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, () => ({
+                loginState: user
+              }));
           },
 
-          register({ register: { user } }: RegisterMutation, _args, cache) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
-              user ? { loginState: user } : data
-            );
+          register({ register: { user } }: RegisterMutation, _, cache) {
+            user &&
+              cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, () => ({
+                loginState: user
+              }));
           },
 
-          changePassword(
-            { changePassword: { user } }: ChangePasswordMutation,
-            _args,
-            cache
-          ) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
-              user ? { loginState: user } : data
-            );
+          changePassword({ changePassword: { user } }: ChangePasswordMutation, _, cache) {
+            user &&
+              cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, () => ({
+                loginState: user
+              }));
           },
 
-          logout({ logout }: LogoutMutation, _args, cache) {
-            cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, data =>
-              logout ? { loginState: null } : data
-            );
+          logout({ logout }: LogoutMutation, _, cache) {
+            logout &&
+              cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, () => ({
+                loginState: null
+              }));
           },
 
           // Post mutations
-          createPost({ createPost }: CreatePostMutation, _args, cache) {
-            cache.updateQuery<PostsQuery, PostsQueryVariables>(
-              { query: PostsDocument, variables: { limit: 10 } },
-              data => {
-                if (data) {
-                  if (createPost) {
-                    return {
-                      posts: {
-                        paginatedPosts: [createPost, ...data.posts.paginatedPosts],
-                        hasMore: data.posts.hasMore,
-                        __typename: 'PaginatedPosts'
-                      }
-                    };
-                  } else {
-                    return data;
-                  }
-                } else {
-                  return null;
-                }
-              }
-            );
+          createPost({ createPost }: CreatePostMutation, _, cache) {
+            if (createPost) {
+              const allFields = cache.inspectFields('Query');
+              const fieldInfos = allFields.filter(info => info.fieldName === 'posts');
+
+              fieldInfos.forEach(fi =>
+                cache.invalidate('Query', 'posts', fi.arguments || {})
+              );
+            }
           },
 
-          vote({ vote }: VoteMutation, { postId }: VoteMutationVariables, cache) {
-            const updatePostUpdoot = (post: Post, vote: VoteResponse) => {
-              const userUpdootIdx = post.updoots.findIndex(
-                updoot =>
-                  updoot.user.id ===
-                  cache.readQuery<LoginStateQuery>({ query: LoginStateDocument })
-                    ?.loginState?.id
+          vote(
+            { vote }: VoteMutation,
+            { postUuid, value }: VoteMutationVariables,
+            cache
+          ) {
+            const loginUser = readLoginUserFromCache(cache);
+            const postFragment = cache.readFragment(PostFragmentDoc, {
+              postUuid
+            } as Post);
+
+            if (loginUser && postFragment && vote) {
+              const userUuid = loginUser.userUuid;
+
+              const userUpdootIdx = postFragment.updoots.findIndex(
+                ({ user }) => user.userUuid === userUuid
               );
 
-              const {
-                vote: voteVal,
-                post: { creator, upvotes, downvotes }
-              } = vote;
+              const realVal = value > 0 ? 1 : -1;
+              if (userUpdootIdx > 0) {
+                const isCancel = postFragment.updoots[userUpdootIdx].vote === realVal;
 
-              post.upvotes = upvotes;
-              post.downvotes = downvotes;
+                if (isCancel) {
+                  postFragment.updoots.splice(userUpdootIdx, 1);
+                  value > 0 ? (postFragment.upvotes -= 1) : (postFragment.downvotes -= 1);
+                } else {
+                  postFragment.updoots[userUpdootIdx].vote = realVal;
 
-              if (voteVal === 0) {
-                userUpdootIdx > -1 && post.updoots.splice(userUpdootIdx, 1);
+                  if (value > 0) {
+                    postFragment.upvotes += 1;
+                    postFragment.downvotes -= 1;
+                  } else {
+                    postFragment.upvotes -= 1;
+                    postFragment.downvotes += 1;
+                  }
+                }
               } else {
-                userUpdootIdx > -1
-                  ? (post.updoots[userUpdootIdx].vote = voteVal)
-                  : post.updoots.push({
-                      vote: voteVal,
-                      user: creator,
-                      __typename: 'Updoot'
-                    } as Updoot);
+                postFragment.updoots.push({
+                  __typename: 'Updoot',
+                  vote: realVal,
+                  user: loginUser as User
+                });
+
+                value > 0 ? (postFragment.upvotes += 1) : (postFragment.downvotes += 1);
               }
-            };
 
-            cache.updateQuery<PostsQuery, PostsQueryVariables>(
-              { query: PostsDocument, variables: { limit: 10 } },
-              data => {
-                if (data) {
-                  const posts = data.posts.paginatedPosts;
-
-                  if (vote) {
-                    const idx = posts.findIndex(post => post.id === postId);
-                    updatePostUpdoot(posts[idx] as Post, vote as VoteResponse);
-                  }
-
-                  return data;
-                } else {
-                  return null;
-                }
-              }
-            );
-
-            cache.updateQuery<PostQuery, PostQueryVariables>(
-              {
-                query: PostDocument,
-                variables: { id: postId }
-              },
-              data => {
-                if (data?.post) {
-                  const post = data.post;
-
-                  if (vote) {
-                    updatePostUpdoot(post as Post, vote as VoteResponse);
-                  }
-
-                  return data;
-                } else {
-                  return null;
-                }
-              }
-            );
+              cache.writeFragment(PostFragmentDoc, {
+                postUuid,
+                updoots: postFragment.updoots,
+                upvotes: postFragment.upvotes,
+                downvotes: postFragment.downvotes
+              } as Post);
+            }
           },
 
           // Comment mutations
           commentPost(
             { commentPost }: CommentPostMutation,
-            { postId }: CommentPostMutationVariables,
+            { postUuid }: CommentPostMutationVariables,
             cache
           ) {
             commentPost &&
-              cache.updateQuery<PostQuery, PostQueryVariables>(
-                {
-                  query: PostDocument,
-                  variables: { id: postId }
-                },
-                data => {
-                  if (data?.post) {
-                    data.post.postComments.push(commentPost);
-                    data.post.comments += 1;
-
-                    return data;
-                  } else {
-                    return null;
-                  }
-                }
-              );
+              cache.invalidate('Query', 'post', { postUuid } as PostQueryVariables);
           },
 
           voteComment(
@@ -282,21 +242,33 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
             { postCommentUuid }: VoteCommentMutationVariables,
             cache
           ) {
-            voteComment &&
-              cache.updateQuery<PostQuery, PostQueryVariables>(
-                { query: PostDocument, variables: { id: voteComment.postId } },
-                data => {
-                  if (data?.post) {
-                    const commentIdx = data.post.postComments.findIndex(
-                      comment => comment.postCommentUuid === postCommentUuid
-                    );
+            const loginUser = readLoginUserFromCache(cache);
+            const commentFragment = cache.readFragment(PostCommentFragmentDoc, {
+              postCommentUuid
+            } as PostComment);
 
-                    return data;
-                  } else {
-                    return null;
-                  }
-                }
+            if (loginUser && commentFragment && voteComment) {
+              const userUpdootIdx = commentFragment.commentUpdoots.findIndex(
+                ({ user }) => user.userUuid === loginUser.userUuid
               );
+
+              if (userUpdootIdx > 0) {
+                commentFragment.commentUpdoots.splice(userUpdootIdx, 1);
+                commentFragment.upvotes -= 1;
+              } else {
+                commentFragment.commentUpdoots.push({
+                  __typename: 'CommentUpdoot',
+                  user: loginUser as User
+                });
+                commentFragment.upvotes += 1;
+              }
+
+              cache.writeFragment(PostCommentFragmentDoc, {
+                postCommentUuid,
+                commentUpdoots: commentFragment.commentUpdoots,
+                upvotes: commentFragment.upvotes
+              } as PostComment);
+            }
           }
         }
       }

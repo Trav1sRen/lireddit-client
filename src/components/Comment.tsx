@@ -20,7 +20,7 @@ const Comment = ({
   const [{ data }] = useLoginStateQuery();
 
   const userUpdoot = commentUpdoots.filter(
-    updoot => updoot.user.id === data?.loginState?.id
+    updoot => updoot.user.userUuid === data?.loginState?.userUuid
   );
 
   return (

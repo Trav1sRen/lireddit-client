@@ -37,12 +37,12 @@ interface FormValues {
 const Post = () => {
   const {
     isReady,
-    query: { id }
+    query: { postUuid }
   } = useRouter();
   const { onOpen, isOpen, onClose } = useDisclosure();
 
   const [{ data, fetching }] = usePostQuery({
-    variables: { id: parseInt(id as string) },
+    variables: { postUuid: postUuid as string },
     pause: !isReady
   });
   const [, commentPost] = useCommentPostMutation();
@@ -113,7 +113,7 @@ const Post = () => {
                   onSubmit={async ({ comment }) => {
                     const { data: response, error } = await commentPost({
                       text: comment,
-                      postId: data.post!.id
+                      postUuid: data.post?.postUuid
                     });
 
                     if (!error && response?.commentPost) {
