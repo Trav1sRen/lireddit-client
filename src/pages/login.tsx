@@ -1,14 +1,14 @@
-import React from 'react';
-import NextLink from 'next/link';
-import { Form, Formik, FormikState } from 'formik';
 import { Button, Flex, Link } from '@chakra-ui/react';
-import Wrapper from '../components/Wrapper';
-import InputField from '../components/InputField';
-import { useLoginMutation } from '../generated/graphql';
-import { toErrorMap } from '../utils/toErrorMap';
-import { useRouter } from 'next/router';
+import { Form, Formik, FormikState } from 'formik';
 import { withUrqlClient } from 'next-urql';
+import NextLink from 'next/link';
+import { useRouter } from 'next/router';
+import React from 'react';
+import InputField from '../components/InputField';
+import Wrapper from '../components/Wrapper';
+import { useLoginMutation } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
+import { toErrorMap } from '../utils/toErrorMap';
 
 interface FormValues {
   usernameOrEmail: string;
@@ -17,7 +17,7 @@ interface FormValues {
 
 const Login = () => {
   const {
-    push,
+    replace,
     query: { next }
   } = useRouter();
   const [, login] = useLoginMutation();
@@ -31,7 +31,7 @@ const Login = () => {
           if (data?.login.errors) {
             setErrors(toErrorMap(data.login.errors));
           } else if (data?.login.user) {
-            await push(next ? (next as string) : '/');
+            replace(next ? (next as string) : '/');
           }
         }}
       >
@@ -50,11 +50,11 @@ const Login = () => {
                 type="password"
               />
               <NextLink href="/forgot-password">
-                <Link mt={4} color="teal">
+                <Link mt={4} color="blue">
                   Forgot the password? Click here
                 </Link>
               </NextLink>
-              <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
+              <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="blue">
                 Login
               </Button>
             </Flex>

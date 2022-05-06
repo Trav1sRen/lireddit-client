@@ -1,18 +1,13 @@
 fragment Post on Post {
   postUuid
   title
-  textSnippet
   updatedAt
   createdAt
   upvotes
   downvotes
-  creator {
+  user {
     ...User
   }
-  updoots {
-    vote
-    user {
-      ...User
-    }
-  }
+  # User could only view his own updoot
+  updootStatus
 }

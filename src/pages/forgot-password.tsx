@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { withUrqlClient } from 'next-urql';
-import { createUrqlClient } from '../utils/createUrqlClient';
-import { Form, Formik, FormikState } from 'formik';
 import { Button } from '@chakra-ui/react';
+import { Form, Formik, FormikState } from 'formik';
+import { withUrqlClient } from 'next-urql';
+import React, { useState } from 'react';
+import AlertBox from '../components/AlertBox';
 import InputField from '../components/InputField';
 import Wrapper from '../components/Wrapper';
 import { useForgetPasswordMutation } from '../generated/graphql';
-import AlertBox from '../components/AlertBox';
+import { createUrqlClient } from '../utils/createUrqlClient';
 
 interface FormValues {
   email: string;
@@ -47,7 +47,7 @@ const forgotPassword = () => {
                 closeBinding={() => setUnexpectedErr(false)}
               />
             )}
-            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
+            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="blue">
               Proceed
             </Button>
           </Form>

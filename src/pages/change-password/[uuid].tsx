@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { withUrqlClient } from 'next-urql';
-import { createUrqlClient } from '../../utils/createUrqlClient';
-import { useRouter } from 'next/router';
-import NextLink from 'next/link';
-import { Form, Formik, FormikState } from 'formik';
-import InputField from '../../components/InputField';
 import { Button, Link } from '@chakra-ui/react';
+import { Form, Formik, FormikState } from 'formik';
+import { withUrqlClient } from 'next-urql';
+import NextLink from 'next/link';
+import { useRouter } from 'next/router';
+import React, { useState } from 'react';
+import AlertBox from '../../components/AlertBox';
+import InputField from '../../components/InputField';
 import Wrapper from '../../components/Wrapper';
 import { useChangePasswordMutation } from '../../generated/graphql';
+import { createUrqlClient } from '../../utils/createUrqlClient';
 import { toErrorMap } from '../../utils/toErrorMap';
-import AlertBox from '../../components/AlertBox';
 
 interface FormValues {
   newPassword: string;
@@ -38,7 +38,7 @@ const ChangePassword = () => {
               const errorMap = toErrorMap(data.changePassword.errors);
               'token' in errorMap ? setTokenErr(errorMap.token) : setErrors(errorMap);
             } else if (data?.changePassword.user) {
-              await replace('/'); // User won't be able to navigate back
+              replace('/');
             }
           } else {
             setUnexpectedErr(true);
@@ -59,7 +59,7 @@ const ChangePassword = () => {
                 title={tokenErr}
                 desc={
                   <NextLink href="/forgot-password">
-                    <Link color="teal">Regain the change password link</Link>
+                    <Link color="blue">Regain the change password link</Link>
                   </NextLink>
                 }
                 closeBinding={() => setTokenErr('')}
@@ -73,7 +73,7 @@ const ChangePassword = () => {
                 closeBinding={() => setUnexpectedErr(false)}
               />
             )}
-            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
+            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="blue">
               Change Password
             </Button>
           </Form>

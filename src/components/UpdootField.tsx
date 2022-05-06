@@ -1,4 +1,5 @@
 import { Flex, Icon, Text } from '@chakra-ui/react';
+import { useRouter } from 'next/router';
 import React from 'react';
 import {
   HiOutlineThumbDown,
@@ -16,18 +17,16 @@ interface UpdootFieldProps {
 }
 
 const UpdootField = ({
-  post,
+  post: { postUuid, upvotes, downvotes, updootStatus },
   iconWidth = 5,
   iconHeight = 5,
   numberSize = 'md'
 }: UpdootFieldProps) => {
-  const [{ data }] = useLoginStateQuery();
   const [, vote] = useVoteMutation();
-  const { postUuid, upvotes, downvotes, updoots } = post;
+  const { push, asPath } = useRouter();
+  const [{ data, fetching: fetchingLoginState }] = useLoginStateQuery();
 
-  const userUpdoot = updoots.filter(
-    updoot => updoot.user.userUuid === data?.loginState?.userUuid
-  );
+  const isUserLogin = () => !fetchingLoginState && data?.loginState;
 
   return (
     <Flex align="center">
@@ -36,26 +35,26 @@ const UpdootField = ({
       </Text>
       <Icon
         cursor="pointer"
-        as={userUpdoot.length && userUpdoot[0].vote === 1 ? HiThumbUp : HiOutlineThumbUp}
+        as={updootStatus === 1 ? HiThumbUp : HiOutlineThumbUp}
         w={iconWidth}
         h={iconHeight}
         ml={2}
-        onClick={async () => await vote({ postUuid, value: 1 })}
+        onClick={() =>
+          isUserLogin() ? vote({ postUuid, value: 1 }) : push(`/login?next=${asPath}`)
+        }
       />
       <Text ml={6} fontSize={numberSize} fontFamily="Georgia, sans-serif">
         {downvotes}
       </Text>
       <Icon
         cursor="pointer"
-        as={
-          userUpdoot.length && userUpdoot[0].vote === -1
-            ? HiThumbDown
-            : HiOutlineThumbDown
-        }
+        as={updootStatus === -1 ? HiThumbDown : HiOutlineThumbDown}
         w={iconWidth}
         h={iconHeight}
         ml={2}
-        onClick={async () => await vote({ postUuid, value: -1 })}
+        onClick={() =>
+          isUserLogin() ? vote({ postUuid, value: -1 }) : push(`/login?next=${asPath}`)
+        }
       />
     </Flex>
   );

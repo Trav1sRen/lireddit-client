@@ -1,5 +1,4 @@
 import {
-  Box,
   Button,
   Divider,
   Drawer,
@@ -8,6 +7,13 @@ import {
   DrawerOverlay,
   Flex,
   Heading,
+  Popover,
+  PopoverArrow,
+  PopoverBody,
+  PopoverCloseButton,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTrigger,
   Stack,
   Text,
   useDisclosure
@@ -21,11 +27,14 @@ import Comment from '../../components/Comment';
 import InputField from '../../components/InputField';
 import Layout from '../../components/Layout';
 import NoContentFiled from '../../components/NoContentField';
+import UpdatePostModal from '../../components/UpdatePostModal';
 import UpdootField from '../../components/UpdootField';
 import {
   Post,
   PostComment,
   useCommentPostMutation,
+  useDeletePostMutation,
+  useLoginStateQuery,
   usePostQuery
 } from '../../generated/graphql';
 import { createUrqlClient } from '../../utils/createUrqlClient';
@@ -35,21 +44,39 @@ interface FormValues {
 }
 
 const Post = () => {
+  const [{ fetching: deleting }, deletePost] = useDeletePostMutation();
+
   const {
     isReady,
-    query: { postUuid }
+    query: { postUuid },
+    replace
   } = useRouter();
-  const { onOpen, isOpen, onClose } = useDisclosure();
+  const {
+    onOpen: onCommentPostOpen,
+    isOpen: isCommentPostOpen,
+    onClose: onCommentPostClose
+  } = useDisclosure();
+  const {
+    onOpen: onUpdatePostOpen,
+    isOpen: isUpdatePostOpen,
+    onClose: onUpdatePostClose
+  } = useDisclosure();
 
+  const [{ data: loginUser }] = useLoginStateQuery();
+  const { push, asPath } = useRouter();
   const [{ data, fetching }] = usePostQuery({
-    variables: { postUuid: postUuid as string },
-    pause: !isReady
+    pause: !isReady,
+    variables: { postUuid: postUuid as string }
   });
   const [, commentPost] = useCommentPostMutation();
 
+  const isViewSelfPost = () =>
+    loginUser?.loginState?.userUuid === data!.post.user.userUuid;
+  const isUserLogin = () => !fetching && loginUser?.loginState;
+
   return (
     <Layout variant="regular">
-      {fetching || !isReady ? (
+      {!isReady || fetching ? (
         <NoContentFiled>Loading the post details from server...</NoContentFiled>
       ) : data?.post ? (
         <Flex alignContent="flex-start" flexDir="column">
@@ -58,7 +85,7 @@ const Post = () => {
           </Heading>
           <Flex alignContent="flex-start" flexDir="column" mt={4}>
             <Text fontFamily="Futura, sans-serif" fontSize="sm">
-              {data.post.creator.username}
+              {data.post.user.username}
             </Text>
             <Text fontFamily="Futura, sans-serif" fontSize="xs">
               {`created at: ${moment(parseInt(data.post.createdAt)).fromNow()}`}
@@ -67,17 +94,73 @@ const Post = () => {
               {`last update: ${moment(parseInt(data.post.updatedAt)).fromNow()}`}
             </Text>
           </Flex>
-          <Text mt={8} fontSize="xl">
+          <Text mt={8} fontSize="xl" whiteSpace="pre-line">
             {data.post.text}
           </Text>
-          <Box mt={12}>
+          <Flex mt={12} align="center" justify="space-between">
             <UpdootField
               post={data.post as Post}
               iconWidth={7}
               iconHeight={7}
               numberSize="xl"
             />
-          </Box>
+            {isViewSelfPost() && (
+              <Flex>
+                <>
+                  <Button
+                    colorScheme="blue"
+                    variant="outline"
+                    mr={4}
+                    onClick={onUpdatePostOpen}
+                  >
+                    Update
+                  </Button>
+                  <UpdatePostModal
+                    post={data.post as Post}
+                    isModalOpen={isUpdatePostOpen}
+                    onModalClose={onUpdatePostClose}
+                  />
+                </>
+                <Popover>
+                  <PopoverTrigger>
+                    <Button mr={4} fontSize="lg" variant="outline" colorScheme="red">
+                      Delete
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <PopoverArrow />
+                    <PopoverCloseButton />
+                    <PopoverHeader>
+                      <Text fontWeight="semibold" fontSize="lg">
+                        Confirmation!
+                      </Text>
+                    </PopoverHeader>
+                    <PopoverBody>
+                      <Text fontSize="lg">Are you sure to delete this post?</Text>
+                      <Button
+                        mt={3}
+                        colorScheme="red"
+                        fontSize="md"
+                        width="30%"
+                        isLoading={deleting}
+                        onClick={async () => {
+                          const { error, data } = await deletePost({
+                            postUuid: postUuid as string
+                          });
+
+                          if (!error && data?.deletePost) {
+                            replace('/');
+                          }
+                        }}
+                      >
+                        Yes
+                      </Button>
+                    </PopoverBody>
+                  </PopoverContent>
+                </Popover>
+              </Flex>
+            )}
+          </Flex>
           <Divider mt={12} />
           {/* Why only using `align-content` is able to stretch each `Comment` to the width of `Wrapper`? */}
           <Flex mt={2} alignContent="flex-start" flexDir="column">
@@ -85,7 +168,13 @@ const Post = () => {
               <Text fontSize="xl" fontWeight="bold" id="comments">
                 Comments:&nbsp;&nbsp;({data.post.comments})
               </Text>
-              <Button colorScheme="teal" mr={1} onClick={onOpen}>
+              <Button
+                colorScheme="blue"
+                mr={1}
+                onClick={() => {
+                  isUserLogin() ? onCommentPostOpen() : push(`/login?next=${asPath}`);
+                }}
+              >
                 Post new comment
               </Button>
             </Flex>
@@ -104,9 +193,13 @@ const Post = () => {
               </NoContentFiled>
             )}
           </Flex>
-          <Drawer placement="bottom" isOpen={isOpen} onClose={onClose}>
+          <Drawer
+            placement="bottom"
+            isOpen={isCommentPostOpen}
+            onClose={onCommentPostClose}
+          >
             <DrawerOverlay />
-            <DrawerContent w={900} h={250} m="auto" borderRadius={10} p={2}>
+            <DrawerContent w={900} h={350} m="auto" borderRadius={10} p={2}>
               <DrawerBody>
                 <Formik
                   initialValues={{ comment: '' }}
@@ -117,7 +210,7 @@ const Post = () => {
                     });
 
                     if (!error && response?.commentPost) {
-                      onClose();
+                      onCommentPostClose();
                     }
                   }}
                 >
@@ -136,12 +229,12 @@ const Post = () => {
                           name="comment"
                           placeholder="write your comment here..."
                           textarea
-                          height={120}
+                          height={200}
                         />
                         <Button
                           type="submit"
                           mt={4}
-                          colorScheme="teal"
+                          colorScheme="blue"
                           isLoading={isSubmitting}
                         >
                           Submit
@@ -163,4 +256,4 @@ const Post = () => {
   );
 };
 
-export default withUrqlClient(createUrqlClient)(Post);
+export default withUrqlClient(createUrqlClient, { ssr: true })(Post);

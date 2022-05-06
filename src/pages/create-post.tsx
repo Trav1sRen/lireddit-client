@@ -1,12 +1,12 @@
-import React from 'react';
-import { withUrqlClient } from 'next-urql';
-import { createUrqlClient } from '../utils/createUrqlClient';
-import { Form, Formik, FormikState } from 'formik';
 import { Button, Flex } from '@chakra-ui/react';
-import InputField from '../components/InputField';
-import { useCreatePostMutation } from '../generated/graphql';
+import { Form, Formik, FormikState } from 'formik';
+import { withUrqlClient } from 'next-urql';
 import { useRouter } from 'next/router';
+import React from 'react';
+import InputField from '../components/InputField';
 import Layout from '../components/Layout';
+import { useCreatePostMutation } from '../generated/graphql';
+import { createUrqlClient } from '../utils/createUrqlClient';
 import useIsAuth from '../utils/useIsAuth';
 
 interface FormValues {
@@ -16,7 +16,7 @@ interface FormValues {
 
 // Create post is not invalidating the posts cache, becos the posts is fetched on the server side
 const createPost = () => {
-  const router = useRouter();
+  const { replace } = useRouter();
   const [, createPost] = useCreatePostMutation();
 
   useIsAuth();
@@ -27,7 +27,7 @@ const createPost = () => {
         initialValues={{ title: '', text: '' }}
         onSubmit={async values => {
           const { error } = await createPost({ input: values });
-          !error && (await router.push('/'));
+          !error && replace('/');
         }}
       >
         {({ isSubmitting }: FormikState<FormValues>) => (
@@ -41,7 +41,7 @@ const createPost = () => {
                 textarea
                 height={250}
               />
-              <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
+              <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="blue">
                 Create the post
               </Button>
             </Flex>

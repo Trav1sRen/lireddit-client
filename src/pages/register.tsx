@@ -1,13 +1,13 @@
-import React from 'react';
-import { Form, Formik, FormikState } from 'formik';
 import { Button } from '@chakra-ui/react';
-import Wrapper from '../components/Wrapper';
-import InputField from '../components/InputField';
-import { useRegisterMutation } from '../generated/graphql';
-import { toErrorMap } from '../utils/toErrorMap';
-import { useRouter } from 'next/router';
+import { Form, Formik, FormikState } from 'formik';
 import { withUrqlClient } from 'next-urql';
+import { useRouter } from 'next/router';
+import React from 'react';
+import InputField from '../components/InputField';
+import Wrapper from '../components/Wrapper';
+import { useRegisterMutation } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
+import { toErrorMap } from '../utils/toErrorMap';
 
 interface FormValues {
   username: string;
@@ -16,7 +16,7 @@ interface FormValues {
 }
 
 const Register = () => {
-  const route = useRouter();
+  const { replace } = useRouter();
   const [, register] = useRegisterMutation();
 
   return (
@@ -28,7 +28,7 @@ const Register = () => {
           if (data?.register.errors) {
             setErrors(toErrorMap(data.register.errors));
           } else if (data?.register.user) {
-            await route.push('/');
+            replace('/');
           }
         }}
       >
@@ -42,7 +42,7 @@ const Register = () => {
               label="Password"
               type="password"
             />
-            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="teal">
+            <Button type="submit" mt={4} isLoading={isSubmitting} colorScheme="blue">
               Register
             </Button>
           </Form>

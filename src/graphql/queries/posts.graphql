@@ -3,6 +3,7 @@ query Posts($limit: Int!, $cursor: String) {
   posts(limit: $limit, cursor: $cursor) {
     paginatedPosts {
       ...Post
+      textSnippet
       comments
     }
     hasMore

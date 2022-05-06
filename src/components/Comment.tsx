@@ -2,7 +2,7 @@ import { Flex, Icon, Text } from '@chakra-ui/react';
 import moment from 'moment';
 import React from 'react';
 import { HiOutlineThumbUp, HiThumbUp } from 'react-icons/hi';
-import { PostComment, useLoginStateQuery } from '../generated/graphql';
+import { PostComment, useVoteCommentMutation } from '../generated/graphql';
 
 interface CommentProps {
   postComment: PostComment;
@@ -10,18 +10,15 @@ interface CommentProps {
 
 const Comment = ({
   postComment: {
+    postCommentUuid,
     user: { username },
     text,
     createdAt,
     upvotes,
-    commentUpdoots
+    commentUpdootStatus
   }
 }: CommentProps) => {
-  const [{ data }] = useLoginStateQuery();
-
-  const userUpdoot = commentUpdoots.filter(
-    updoot => updoot.user.userUuid === data?.loginState?.userUuid
-  );
+  const [, voteComment] = useVoteCommentMutation();
 
   return (
     <Flex p={4} shadow="md" borderWidth="1px" alignContent="flex-start" flexDir="column">
@@ -37,17 +34,18 @@ const Comment = ({
         <Flex align="center" mr={4}>
           <Icon
             cursor="pointer"
-            as={userUpdoot.length ? HiThumbUp : HiOutlineThumbUp}
+            as={commentUpdootStatus === 1 ? HiThumbUp : HiOutlineThumbUp}
             w={5}
             h={5}
             ml={2}
+            onClick={() => voteComment({ postCommentUuid })}
           />
           <Text ml={2} fontFamily="Georgia, sans-serif">
             {upvotes}
           </Text>
         </Flex>
       </Flex>
-      <Text mt={4} fontSize="xl">
+      <Text mt={4} fontSize="xl" whiteSpace="pre-line">
         {text}
       </Text>
     </Flex>

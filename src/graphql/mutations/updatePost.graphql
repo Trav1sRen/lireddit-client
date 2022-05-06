@@ -1,0 +1,3 @@
+mutation UpdatePost($postUuid: String!, $title: String, $text: String) {
+  updatePost(postUuid: $postUuid, title: $title, text: $text)
+}

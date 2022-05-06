@@ -14,6 +14,8 @@ import {
   CommentPostMutation,
   CommentPostMutationVariables,
   CreatePostMutation,
+  DeletePostMutation,
+  DeletePostMutationVariables,
   LoginMutation,
   LoginStateDocument,
   LoginStateQuery,
@@ -24,6 +26,8 @@ import {
   PostFragmentDoc,
   PostQueryVariables,
   RegisterMutation,
+  UpdatePostMutation,
+  UpdatePostMutationVariables,
   User,
   VoteCommentMutation,
   VoteCommentMutationVariables,
@@ -89,17 +93,19 @@ const errorExchange: Exchange =
   ops$ =>
     pipe(
       forward(ops$),
-      tap(async ({ error }) => {
+      tap(({ error }) => {
         if (error?.message.includes('not authenticated')) {
-          await Router.replace('/login');
+          Router.push('/login');
         }
       })
     );
 
-const readLoginUserFromCache = (cache: Cache) =>
-  cache.readQuery<LoginStateQuery>({
-    query: LoginStateDocument
-  })?.loginState;
+const invalidatePostsCache = (cache: Cache) => {
+  const allFields = cache.inspectFields('Query');
+  const fieldInfos = allFields.filter(info => info.fieldName === 'posts');
+
+  fieldInfos.forEach(fi => cache.invalidate('Query', 'posts', fi.arguments || {}));
+};
 
 export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
   url: 'http://localhost:7070/graphql',
@@ -119,10 +125,12 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
        **/
 
       keys: {
-        PaginatedPosts: () => null, // Becos PaginatedPosts is embedded on parent key directly
-        PostComment: () => null,
+        PaginatedPosts: () => null,
+        Post: data => (data as Post).postUuid,
+        User: data => (data as User).userUuid,
+        PostComment: data => (data as PostComment).postCommentUuid,
         Updoot: () => null,
-        User: () => null // The `User` object which is embedded on `PostComment`
+        CommentUpdoot: () => null
       },
       resolvers: {
         // Client resolvers, run when query is executed
@@ -134,10 +142,12 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
         Mutation: {
           // User mutations
           login({ login: { user } }: LoginMutation, _, cache) {
-            user &&
+            if (user) {
               cache.updateQuery<LoginStateQuery>({ query: LoginStateDocument }, () => ({
                 loginState: user
               }));
+              invalidatePostsCache(cache);
+            }
           },
 
           register({ register: { user } }: RegisterMutation, _, cache) {
@@ -163,13 +173,25 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
 
           // Post mutations
           createPost({ createPost }: CreatePostMutation, _, cache) {
-            if (createPost) {
-              const allFields = cache.inspectFields('Query');
-              const fieldInfos = allFields.filter(info => info.fieldName === 'posts');
+            createPost && invalidatePostsCache(cache);
+          },
 
-              fieldInfos.forEach(fi =>
-                cache.invalidate('Query', 'posts', fi.arguments || {})
-              );
+          updatePost(
+            { updatePost }: UpdatePostMutation,
+            { postUuid }: UpdatePostMutationVariables,
+            cache
+          ) {
+            updatePost && cache.invalidate({ __typename: 'Post', postUuid });
+          },
+
+          deletePost(
+            { deletePost }: DeletePostMutation,
+            { postUuid }: DeletePostMutationVariables,
+            cache
+          ) {
+            if (deletePost) {
+              cache.invalidate({ __typename: 'Post', postUuid });
+              invalidatePostsCache(cache);
             }
           },
 
@@ -178,27 +200,22 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
             { postUuid, value }: VoteMutationVariables,
             cache
           ) {
-            const loginUser = readLoginUserFromCache(cache);
             const postFragment = cache.readFragment(PostFragmentDoc, {
               postUuid
             } as Post);
 
-            if (loginUser && postFragment && vote) {
-              const userUuid = loginUser.userUuid;
-
-              const userUpdootIdx = postFragment.updoots.findIndex(
-                ({ user }) => user.userUuid === userUuid
-              );
-
+            if (postFragment && vote) {
+              const status = postFragment.updootStatus;
               const realVal = value > 0 ? 1 : -1;
-              if (userUpdootIdx > 0) {
-                const isCancel = postFragment.updoots[userUpdootIdx].vote === realVal;
+
+              if (status !== 0) {
+                const isCancel = status === realVal;
 
                 if (isCancel) {
-                  postFragment.updoots.splice(userUpdootIdx, 1);
+                  postFragment.updootStatus = 0;
                   value > 0 ? (postFragment.upvotes -= 1) : (postFragment.downvotes -= 1);
                 } else {
-                  postFragment.updoots[userUpdootIdx].vote = realVal;
+                  postFragment.updootStatus = realVal;
 
                   if (value > 0) {
                     postFragment.upvotes += 1;
@@ -209,21 +226,11 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
                   }
                 }
               } else {
-                postFragment.updoots.push({
-                  __typename: 'Updoot',
-                  vote: realVal,
-                  user: loginUser as User
-                });
-
+                postFragment.updootStatus = realVal;
                 value > 0 ? (postFragment.upvotes += 1) : (postFragment.downvotes += 1);
               }
 
-              cache.writeFragment(PostFragmentDoc, {
-                postUuid,
-                updoots: postFragment.updoots,
-                upvotes: postFragment.upvotes,
-                downvotes: postFragment.downvotes
-              } as Post);
+              cache.writeFragment(PostFragmentDoc, postFragment);
             }
           },
 
@@ -242,32 +249,22 @@ export const createUrqlClient: NextUrqlClientConfig = (ssrExchange, ctx) => ({
             { postCommentUuid }: VoteCommentMutationVariables,
             cache
           ) {
-            const loginUser = readLoginUserFromCache(cache);
             const commentFragment = cache.readFragment(PostCommentFragmentDoc, {
               postCommentUuid
             } as PostComment);
 
-            if (loginUser && commentFragment && voteComment) {
-              const userUpdootIdx = commentFragment.commentUpdoots.findIndex(
-                ({ user }) => user.userUuid === loginUser.userUuid
-              );
+            if (commentFragment && voteComment) {
+              const status = commentFragment.commentUpdootStatus;
 
-              if (userUpdootIdx > 0) {
-                commentFragment.commentUpdoots.splice(userUpdootIdx, 1);
+              if (status !== 0) {
+                commentFragment.commentUpdootStatus = 0;
                 commentFragment.upvotes -= 1;
               } else {
-                commentFragment.commentUpdoots.push({
-                  __typename: 'CommentUpdoot',
-                  user: loginUser as User
-                });
+                commentFragment.commentUpdootStatus = 1;
                 commentFragment.upvotes += 1;
               }
 
-              cache.writeFragment(PostCommentFragmentDoc, {
-                postCommentUuid,
-                commentUpdoots: commentFragment.commentUpdoots,
-                upvotes: commentFragment.upvotes
-              } as PostComment);
+              cache.writeFragment(PostCommentFragmentDoc, commentFragment);
             }
           }
         }

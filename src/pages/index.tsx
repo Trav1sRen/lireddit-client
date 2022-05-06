@@ -1,4 +1,4 @@
-import { PlusSquareIcon } from '@chakra-ui/icons';
+import { PlusSquareIcon, Search2Icon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
@@ -6,6 +6,9 @@ import {
   Flex,
   Heading,
   Icon,
+  Input,
+  InputGroup,
+  InputLeftElement,
   Link,
   Stack,
   Text
@@ -37,35 +40,39 @@ const Index = () => {
     variables
   });
 
-  const userHasPosts = (): boolean =>
+  const userHasPosts = () =>
     !fetching && !!data?.posts && data.posts.paginatedPosts.length > 0;
 
   return (
     <Layout>
-      <Flex px={2} align="center" justify={userHasPosts() ? 'space-between' : 'center'}>
-        <Heading pt={2.5} size="2xl" fontFamily="Papyrus, sans-serif">
-          LIREDDIT
-        </Heading>
-        {userHasPosts() && (
+      {userHasPosts && (
+        <Flex align="center" justify={userHasPosts() ? 'space-between' : 'center'}>
+          <InputGroup size="lg" width="70%">
+            <InputLeftElement
+              pointerEvents="none"
+              children={<Search2Icon color="gray.300" />}
+            />
+            <Input placeholder="Find the posts..." />
+          </InputGroup>
           <NextLink href="/create-post">
-            <Button colorScheme="teal" fontSize="lg">
+            <Button colorScheme="blue" fontSize="lg">
               Create new post
             </Button>
           </NextLink>
-        )}
-      </Flex>
+        </Flex>
+      )}
       {fetching ? (
         <NoContentField>Loading the posts from server...</NoContentField>
       ) : !error && data?.posts ? (
         data.posts.paginatedPosts.length > 0 ? (
           <>
-            <Stack spacing={8} mt={6}>
+            <Stack spacing={8} mt={10}>
               {data.posts.paginatedPosts.map(post => {
                 const {
                   postUuid,
                   title,
                   textSnippet,
-                  creator: { username },
+                  user: { username },
                   comments
                 } = post;
 
@@ -105,7 +112,7 @@ const Index = () => {
             {data.posts.hasMore ? (
               <Button
                 variant="link"
-                color="teal"
+                color="blue"
                 my={4}
                 ml={4}
                 fontSize="lg"
@@ -127,9 +134,9 @@ const Index = () => {
           <NoContentField>
             You got no posts, try to{' '}
             <NextLink href="/create-post">
-              <Link color="teal">create a new one</Link>
+              <Link color="blue">create a new one</Link>
             </NextLink>
-            <PlusSquareIcon ml={1} color="teal" />
+            <PlusSquareIcon ml={1} color="blue" />
           </NoContentField>
         )
       ) : (

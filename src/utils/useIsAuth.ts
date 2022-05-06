@@ -1,14 +1,14 @@
 import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 import { useLoginStateQuery } from '../generated/graphql';
-import useAsyncEffect from './useAsyncEffect';
 
 const useIsAuth = () => {
   const router = useRouter();
   const [{ data, fetching }] = useLoginStateQuery();
 
-  useAsyncEffect(async () => {
+  useEffect(() => {
     if (!fetching && !data?.loginState) {
-      await router.replace(`/login?next=${router.pathname}`);
+      router.replace(`/login?next=${router.asPath}`);
     }
   }, [router, data, fetching]);
 };

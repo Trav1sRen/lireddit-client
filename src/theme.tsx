@@ -13,6 +13,7 @@ const theme = extendTheme({
     global: {
       '.chakra-form-control': {
         '.chakra-form__error-message': {
+          fontSize: 'md',
           fontWeight: 'semibold'
         }
       }

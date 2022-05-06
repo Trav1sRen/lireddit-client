@@ -6,9 +6,6 @@ fragment PostComment on PostComment {
   }
   createdAt
   upvotes
-  commentUpdoots {
-    user {
-      ...User
-    }
-  }
+  # User could only view his own comment updoot
+  commentUpdootStatus
 }

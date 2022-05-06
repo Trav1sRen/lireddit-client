@@ -1,11 +1,17 @@
-import { Box, Button, Flex, Link } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Link } from '@chakra-ui/react';
 import NextLink from 'next/link';
-import React from 'react';
+import { useRouter } from 'next/router';
+import React, { useEffect } from 'react';
 import { useLoginStateQuery, useLogoutMutation } from '../generated/graphql';
 
 const Navbar = () => {
+  const { reload } = useRouter();
   const [{ data, fetching }] = useLoginStateQuery();
   const [{ fetching: fetchingLogout }, logout] = useLogoutMutation();
+
+  useEffect(() => {
+    document.title = 'Lireddit';
+  }, []);
 
   let navbarContent;
 
@@ -15,12 +21,12 @@ const Navbar = () => {
     navbarContent = (
       <>
         <NextLink href="/login">
-          <Link mr={2} color="white" fontWeight="semibold">
+          <Link mr={3} color="blue" fontWeight="semibold">
             Login
           </Link>
         </NextLink>
         <NextLink href="/register">
-          <Link color="white" fontWeight="semibold">
+          <Link color="blue" fontWeight="semibold">
             Register
           </Link>
         </NextLink>
@@ -29,12 +35,16 @@ const Navbar = () => {
   } else {
     navbarContent = (
       <Flex align="baseline" fontFamily="Futura, sans-serif">
-        <Box mr={2}>{data.loginState.username}</Box>
+        <Box mr={3}>{data.loginState.username}</Box>
         <Button
-          variant="link"
-          colorScheme="blue"
-          onClick={() => logout()}
+          color="blue"
+          fontWeight="semibold"
+          onClick={async () => {
+            await logout();
+            reload();
+          }}
           isLoading={fetchingLogout}
+          variant="link"
         >
           Logout
         </Button>
@@ -43,8 +53,22 @@ const Navbar = () => {
   }
 
   return (
-    <Flex pos="sticky" top={0} zIndex={1} bg="tan" p={4}>
-      <Box ml="auto">{navbarContent}</Box>
+    <Flex
+      position="sticky"
+      top={0}
+      zIndex={1}
+      bg="gainsboro"
+      px={10}
+      py={4}
+      align="center"
+      justify="space-between"
+    >
+      <NextLink href="/">
+        <Heading pt={3} size="2xl" fontFamily="Papyrus, sans-serif" cursor="pointer">
+          LIREDDIT
+        </Heading>
+      </NextLink>
+      <Box>{navbarContent}</Box>
     </Flex>
   );
 };
